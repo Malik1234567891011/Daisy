@@ -92,8 +92,8 @@ export default function StepProfile({
 
   return (
     <div className="pt-4 md:pt-8">
-      <h2 className="font-display text-3xl text-charcoal mb-2">The basics</h2>
-      <p className="text-text-secondary mb-8">Just enough to get started.</p>
+      <h2 className="font-display text-3xl text-charcoal mb-2.5">The basics</h2>
+      <p className="text-text-secondary mb-10">Just enough to get started.</p>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-5">
         <Input

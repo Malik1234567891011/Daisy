@@ -10,10 +10,10 @@ function Badge({ variant = "neutral", className, children, ...props }: BadgeProp
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium",
+        "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium tracking-wide",
 
-        variant === "sage" && "bg-sage-pale text-olive",
-        variant === "butter" && "bg-butter-pale text-espresso",
+        variant === "sage" && "bg-sage-pale/70 text-olive border border-sage-light/30",
+        variant === "butter" && "bg-butter-pale/70 text-espresso border border-butter-light/40",
         variant === "neutral" && "bg-cream text-text-secondary",
         variant === "success" && "bg-success-light text-success",
         variant === "error" && "bg-error-light text-error",

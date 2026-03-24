@@ -74,19 +74,19 @@ export default function LoginPage() {
   return (
     <div
       className={cn(
-        "min-h-screen bg-ivory px-4 py-12",
-        "flex flex-col items-center justify-center font-body"
+        "min-h-screen bg-ivory bg-grain px-4 py-12",
+        "flex flex-col items-center justify-center"
       )}
     >
-      <div className="flex w-full max-w-sm flex-col items-center gap-8">
+      <div className="flex w-full max-w-sm flex-col items-center gap-10">
         <DaisyLogo size="md" className="shrink-0" />
 
-        <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-md">
-          <div className="mb-8 text-center">
+        <div className="w-full rounded-2xl bg-white p-8 sm:p-10 shadow-card border border-border-light/60">
+          <div className="mb-9 text-center">
             <h1 className="font-display text-2xl text-charcoal">
               Welcome back
             </h1>
-            <p className="mt-2 text-sm text-text-secondary">
+            <p className="mt-2.5 text-sm text-text-secondary">
               Sign in to check on your matches
             </p>
           </div>
@@ -124,10 +124,10 @@ export default function LoginPage() {
                 }}
                 disabled={isSubmitting}
               />
-              <div className="mt-2 text-right">
+              <div className="mt-2.5 text-right">
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-sage transition-colors hover:text-olive"
+                  className="text-[13px] text-sage transition-colors duration-200 hover:text-olive"
                 >
                   Forgot password?
                 </Link>
@@ -135,7 +135,7 @@ export default function LoginPage() {
             </div>
 
             {formError ? (
-              <p className="text-sm text-error" role="alert">
+              <p className="text-[13px] text-error" role="alert">
                 {formError}
               </p>
             ) : null}
@@ -147,16 +147,16 @@ export default function LoginPage() {
               className="w-full"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Signing in…" : "Sign in"}
+              {isSubmitting ? "Signing in\u2026" : "Sign in"}
             </Button>
           </form>
 
-          <div className="relative my-8">
+          <div className="relative my-9">
             <div className="absolute inset-0 flex items-center" aria-hidden>
-              <div className="w-full border-t border-border" />
+              <div className="w-full border-t border-border-light" />
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-white px-3 text-text-tertiary">or</span>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-white px-4 text-text-tertiary tracking-wide uppercase">or</span>
             </div>
           </div>
 
@@ -173,7 +173,7 @@ export default function LoginPage() {
         <p className="text-center text-sm text-text-tertiary">
           <Link
             href="/"
-            className="text-sage transition-colors hover:text-olive"
+            className="text-sage transition-colors duration-200 hover:text-olive"
           >
             Back to home
           </Link>

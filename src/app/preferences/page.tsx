@@ -208,13 +208,13 @@ export default function PreferencesPage() {
 
   if (showSessionGate) {
     return (
-      <div className="flex min-h-dvh flex-col bg-ivory">
+      <div className="flex min-h-dvh flex-col bg-ivory bg-grain">
         <Navbar />
 
         <main className="flex-1">
-          <div className="section-container max-w-2xl py-10 sm:py-14">
+          <div className="section-container max-w-2xl py-12 sm:py-16">
             <p className="text-sm text-text-secondary" role="status">
-              {status === "unauthenticated" ? "Redirecting…" : "Loading…"}
+              {status === "unauthenticated" ? "Redirecting\u2026" : "Loading\u2026"}
             </p>
           </div>
         </main>
@@ -225,11 +225,11 @@ export default function PreferencesPage() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-ivory">
+    <div className="flex min-h-dvh flex-col bg-ivory bg-grain">
       <Navbar />
 
       <main className="flex-1">
-        <div className="section-container max-w-2xl py-10 sm:py-14">
+        <div className="section-container max-w-2xl py-12 sm:py-16">
           {/* Back link */}
           <Link
             href="/dashboard"

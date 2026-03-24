@@ -22,26 +22,26 @@ function FAQItem({
   const triggerId = `faq-trigger-${id}`;
 
   return (
-    <div className="border-b border-border-light last:border-b-0">
+    <div className="border-b border-border-light/70 last:border-b-0">
       <button
         id={triggerId}
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={onToggle}
-        className="flex w-full items-center justify-between gap-4 py-5 text-left transition-colors hover:text-charcoal focus-visible:outline-2 focus-visible:outline-sage focus-visible:outline-offset-2 rounded-lg"
+        className="flex w-full items-center justify-between gap-4 py-6 text-left transition-colors duration-200 hover:text-charcoal focus-visible:outline-2 focus-visible:outline-sage focus-visible:outline-offset-2 rounded-lg"
       >
         <span className={cn(
-          "font-medium text-base lg:text-lg transition-colors duration-150",
+          "font-medium text-base lg:text-[17px] transition-colors duration-200",
           isOpen ? "text-charcoal" : "text-text-primary"
         )}>
           {question}
         </span>
         <ChevronDown
           className={cn(
-            "w-5 h-5 text-text-tertiary flex-shrink-0 transition-transform duration-250 ease-out",
+            "w-5 h-5 text-text-tertiary flex-shrink-0 transition-all duration-300 ease-out",
             isOpen && "rotate-180 text-sage"
           )}
-          strokeWidth={1.8}
+          strokeWidth={1.6}
           aria-hidden="true"
         />
       </button>
@@ -49,14 +49,14 @@ function FAQItem({
         id={panelId}
         role="region"
         aria-labelledby={triggerId}
-        className="overflow-hidden transition-[max-height,opacity] duration-300 ease-out"
+        className="overflow-hidden transition-[max-height,opacity] duration-350 ease-out"
         style={{
           maxHeight: isOpen ? contentRef.current?.scrollHeight ?? 200 : 0,
           opacity: isOpen ? 1 : 0,
         }}
       >
-        <div ref={contentRef} className="pb-5 pr-10">
-          <p className="text-text-secondary text-sm sm:text-base leading-relaxed">
+        <div ref={contentRef} className="pb-6 pr-10">
+          <p className="text-text-secondary text-sm sm:text-[15px] leading-relaxed">
             {answer}
           </p>
         </div>
@@ -73,10 +73,10 @@ export default function FAQ() {
   }, []);
 
   return (
-    <section id="faq" className="py-20 lg:py-28 bg-ivory-warm">
+    <section id="faq" className="py-24 lg:py-32 bg-ivory-warm">
       <div className="section-container">
-        <div className="text-center mb-12 lg:mb-16">
-          <h2 className="font-display text-3xl lg:text-4xl text-charcoal">
+        <div className="text-center mb-14 lg:mb-18">
+          <h2 className="section-heading">
             Common questions
           </h2>
         </div>

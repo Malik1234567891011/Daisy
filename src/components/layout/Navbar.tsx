@@ -40,23 +40,25 @@ export default function Navbar() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 w-full border-b border-border-light bg-ivory/90 backdrop-blur-md",
-        "transition-shadow duration-300",
-        scrolled && "shadow-sm"
+        "sticky top-0 z-50 w-full bg-ivory/80 backdrop-blur-xl",
+        "transition-all duration-500 ease-out",
+        scrolled
+          ? "border-b border-border-light/60 shadow-sm"
+          : "border-b border-transparent"
       )}
     >
       <nav
-        className="section-container flex h-16 items-center justify-between"
+        className="section-container flex h-[68px] items-center justify-between"
         aria-label="Main navigation"
       >
         <DaisyLogo size="md" />
 
-        <ul className="hidden lg:flex items-center gap-8" role="list">
+        <ul className="hidden lg:flex items-center gap-9" role="list">
           {NAV_LINKS.map((link) => (
             <li key={link.href}>
               <Link
                 href={link.href}
-                className="text-sm text-text-secondary transition-colors duration-150 hover:text-charcoal"
+                className="relative text-[13px] tracking-wide text-text-secondary transition-colors duration-200 hover:text-charcoal"
               >
                 {link.label}
               </Link>
@@ -64,8 +66,7 @@ export default function Navbar() {
           ))}
         </ul>
 
-        {/* Desktop actions — changes based on auth state */}
-        <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-2.5">
           {isLoggedIn ? (
             <>
               <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: "/" })}>
@@ -87,7 +88,6 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile actions */}
         <div className="flex lg:hidden items-center gap-2">
           {isLoggedIn ? (
             <Button variant="primary" href="/dashboard" size="sm">
@@ -102,9 +102,9 @@ export default function Navbar() {
             type="button"
             onClick={() => setMenuOpen((prev) => !prev)}
             className={cn(
-              "relative flex items-center justify-center w-10 h-10 rounded-lg",
-              "text-text-secondary hover:text-charcoal hover:bg-sage-pale/50",
-              "transition-colors duration-150"
+              "relative flex items-center justify-center w-10 h-10 rounded-xl",
+              "text-text-secondary hover:text-charcoal hover:bg-sage-pale/40",
+              "transition-all duration-200"
             )}
             aria-expanded={menuOpen}
             aria-controls="mobile-menu"
@@ -137,21 +137,21 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile menu overlay */}
+      {/* Mobile menu */}
       <div
         id="mobile-menu"
         role="dialog"
         aria-modal="true"
         aria-label="Mobile navigation"
         className={cn(
-          "fixed inset-x-0 top-16 bottom-0 z-40 bg-ivory lg:hidden",
+          "fixed inset-x-0 top-[68px] bottom-0 z-40 bg-ivory/95 backdrop-blur-xl lg:hidden",
           "transition-all duration-300 ease-out",
           menuOpen
             ? "opacity-100 visible translate-y-0"
             : "opacity-0 invisible -translate-y-2"
         )}
       >
-        <nav className="flex h-full flex-col px-6 pt-8 pb-10">
+        <nav className="flex h-full flex-col px-6 pt-10 pb-10">
           <ul className="flex flex-col gap-1" role="list">
             {NAV_LINKS.map((link) => (
               <li key={link.href}>
@@ -159,8 +159,8 @@ export default function Navbar() {
                   href={link.href}
                   onClick={close}
                   className={cn(
-                    "block rounded-lg px-3 py-3.5 text-lg text-text-secondary",
-                    "transition-colors duration-150 hover:text-charcoal hover:bg-sage-pale/40"
+                    "block rounded-xl px-4 py-4 text-lg text-text-secondary",
+                    "transition-all duration-200 hover:text-charcoal hover:bg-sage-pale/30"
                   )}
                 >
                   {link.label}

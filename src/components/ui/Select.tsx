@@ -36,7 +36,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
         {label && (
           <label
             htmlFor={id}
-            className="mb-1.5 block text-sm font-medium text-charcoal"
+            className="mb-2 block text-sm font-medium text-charcoal"
           >
             {label}
           </label>
@@ -50,10 +50,12 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
               error ? errorId : helperText ? helperId : undefined
             }
             className={cn(
-              "w-full appearance-none rounded-xl border bg-white px-4 py-3 pr-10 text-base text-text-primary transition-colors duration-200",
-              "focus:outline-none focus:border-sage focus:ring-2 focus:ring-sage-light",
-              "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-cream",
-              error ? "border-error" : "border-border",
+              "w-full appearance-none rounded-xl border bg-white px-4 py-3 pr-10 text-[15px] text-text-primary",
+              "transition-all duration-200 ease-out",
+              "focus:outline-none focus:border-sage focus:ring-2 focus:ring-sage-light/60",
+              "hover:border-border/80",
+              "disabled:cursor-not-allowed disabled:opacity-40 disabled:bg-cream/50",
+              error ? "border-error ring-1 ring-error/10" : "border-border",
               className
             )}
             {...props}
@@ -70,17 +72,17 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ))}
           </select>
           <ChevronDown
-            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-tertiary"
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-text-tertiary"
             aria-hidden="true"
           />
         </div>
         {error && (
-          <p id={errorId} className="mt-1.5 text-sm text-error" role="alert">
+          <p id={errorId} className="mt-1.5 text-[13px] text-error" role="alert">
             {error}
           </p>
         )}
         {!error && helperText && (
-          <p id={helperId} className="mt-1.5 text-sm text-text-tertiary">
+          <p id={helperId} className="mt-1.5 text-[13px] text-text-tertiary">
             {helperText}
           </p>
         )}

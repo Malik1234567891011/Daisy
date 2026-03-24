@@ -3,23 +3,21 @@ import { Card } from "@/components/ui/Card";
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-20 lg:py-28 bg-ivory">
+    <section id="how-it-works" className="py-24 lg:py-32 bg-ivory bg-grain">
       <div className="section-container">
-        {/* Section header */}
-        <div className="text-center mb-14 lg:mb-18">
-          <h2 className="font-display text-3xl lg:text-4xl text-charcoal">
+        <div className="text-center mb-16 lg:mb-20">
+          <h2 className="section-heading">
             {HOW_IT_WORKS.heading}
           </h2>
-          <p className="text-text-secondary mt-3 max-w-md mx-auto">
+          <p className="section-subheading mt-4">
             {HOW_IT_WORKS.subheading}
           </p>
         </div>
 
-        {/* Steps grid */}
         <div className="relative grid md:grid-cols-3 gap-6 lg:gap-8 max-w-4xl mx-auto">
-          {/* Connecting line (desktop only) */}
+          {/* Connecting line */}
           <div
-            className="hidden md:block absolute top-12 left-[20%] right-[20%] h-px bg-border"
+            className="hidden md:block absolute top-14 left-[20%] right-[20%] h-px bg-border-light"
             aria-hidden="true"
           />
 
@@ -27,14 +25,13 @@ export default function HowItWorks() {
             <Card
               key={i}
               hover
-              className="relative text-center px-6 py-8 lg:py-10"
+              className="relative text-center px-6 py-10 lg:py-12"
             >
-              {/* Step number */}
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-sage-pale text-sage font-display text-sm mb-5 relative z-10">
+              <div className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-sage-pale/70 text-sage font-display text-sm mb-6 relative z-10 border border-sage-light/40">
                 {step.number}
               </div>
 
-              <h3 className="font-display text-xl text-charcoal mb-2">
+              <h3 className="font-display text-xl text-charcoal mb-2.5">
                 {step.title}
               </h3>
               <p className="text-text-secondary text-sm leading-relaxed">

@@ -2,42 +2,46 @@
 
 @theme inline {
   --color-ivory: #FFFDF7;
-  --color-ivory-warm: #FBF7F0;
-  --color-cream: #F5EFE0;
-  --color-cream-dark: #E8E2D8;
-  --color-sage: #8B9E7E;
-  --color-sage-light: #C5D1BC;
-  --color-sage-pale: #E8EDE4;
-  --color-butter: #E8D5A3;
-  --color-butter-light: #F3EBD4;
-  --color-butter-pale: #FAF5EA;
-  --color-charcoal: #2C2C2C;
+  --color-ivory-warm: #FAF7F2;
+  --color-cream: #F2EDE3;
+  --color-cream-dark: #E5DFD5;
+  --color-sage: #6B7F5E;
+  --color-sage-light: #B5C4AB;
+  --color-sage-pale: #E4EBE0;
+  --color-sage-muted: #93A688;
+  --color-butter: #D4B978;
+  --color-butter-light: #EDE3C8;
+  --color-butter-pale: #F7F2E6;
+  --color-charcoal: #2A2F2A;
   --color-espresso: #5C4A3A;
-  --color-olive: #4A5440;
-  --color-text-primary: #1A1A1A;
-  --color-text-secondary: #6B6B6B;
-  --color-text-tertiary: #9A9A9A;
-  --color-border: #E8E2D8;
-  --color-border-light: #F0EBE3;
-  --color-error: #C75050;
-  --color-error-light: #FDF2F2;
-  --color-success: #5A8F5A;
-  --color-success-light: #F0F7F0;
+  --color-olive: #3E4A36;
+  --color-text-primary: #1E2420;
+  --color-text-secondary: #5E6660;
+  --color-text-tertiary: #8C948C;
+  --color-border: #DDD8CE;
+  --color-border-light: #EDE9E2;
+  --color-error: #B84A4A;
+  --color-error-light: #FDF1F1;
+  --color-success: #4E7F4E;
+  --color-success-light: #EFF6EF;
 
-  --font-display: "DM Serif Display", Georgia, serif;
+  --font-display: "DM Serif Display", Georgia, "Times New Roman", serif;
   --font-body: "Inter", system-ui, -apple-system, sans-serif;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
   --radius-xl: 24px;
+  --radius-2xl: 32px;
   --radius-full: 9999px;
 
-  --shadow-xs: 0 1px 2px rgba(44, 44, 44, 0.04);
-  --shadow-sm: 0 1px 3px rgba(44, 44, 44, 0.06), 0 1px 2px rgba(44, 44, 44, 0.04);
-  --shadow-md: 0 4px 12px rgba(44, 44, 44, 0.06), 0 1px 3px rgba(44, 44, 44, 0.04);
-  --shadow-lg: 0 8px 24px rgba(44, 44, 44, 0.08), 0 2px 6px rgba(44, 44, 44, 0.04);
-  --shadow-xl: 0 16px 40px rgba(44, 44, 44, 0.1), 0 4px 12px rgba(44, 44, 44, 0.04);
+  --shadow-xs: 0 1px 2px rgba(42, 47, 42, 0.03);
+  --shadow-sm: 0 1px 3px rgba(42, 47, 42, 0.04), 0 1px 2px rgba(42, 47, 42, 0.03);
+  --shadow-md: 0 4px 16px rgba(42, 47, 42, 0.05), 0 1px 4px rgba(42, 47, 42, 0.03);
+  --shadow-lg: 0 8px 32px rgba(42, 47, 42, 0.06), 0 2px 8px rgba(42, 47, 42, 0.03);
+  --shadow-xl: 0 16px 48px rgba(42, 47, 42, 0.08), 0 4px 16px rgba(42, 47, 42, 0.03);
+  --shadow-card: 0 2px 8px rgba(42, 47, 42, 0.04), 0 0 0 1px rgba(42, 47, 42, 0.03);
+  --shadow-card-hover: 0 8px 24px rgba(42, 47, 42, 0.07), 0 0 0 1px rgba(42, 47, 42, 0.04);
 }
 
 @layer base {
@@ -71,18 +75,23 @@
     font-family: var(--font-body);
     background-color: var(--color-ivory);
     color: var(--color-text-primary);
-    line-height: 1.6;
+    line-height: 1.65;
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
+    letter-spacing: -0.006em;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
-    line-height: 1.2;
-    letter-spacing: -0.01em;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
     color: var(--color-charcoal);
+    font-weight: 400;
   }
+
+  h1 { line-height: 1.08; letter-spacing: -0.02em; }
+  h2 { line-height: 1.12; }
 
   ::selection {
     background-color: var(--color-sage-light);
@@ -105,7 +114,7 @@
 @layer components {
   .section-container {
     width: 100%;
-    max-width: 1200px;
+    max-width: 1180px;
     margin-left: auto;
     margin-right: auto;
     padding-left: 1.25rem;
@@ -128,5 +137,26 @@
 
   .text-balance {
     text-wrap: balance;
+  }
+
+  .section-heading {
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    color: var(--color-charcoal);
+    letter-spacing: -0.015em;
+  }
+
+  .section-subheading {
+    color: var(--color-text-secondary);
+    line-height: 1.7;
+    max-width: 28rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@layer utilities {
+  .bg-grain {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
   }
 }

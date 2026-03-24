@@ -182,7 +182,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-ivory">
+    <div className="flex min-h-dvh flex-col bg-ivory bg-grain">
       <Navbar />
 
       <main className="flex-1">

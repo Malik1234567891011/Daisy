@@ -50,9 +50,9 @@ function calculateProfileCompletion(user: UserData): number {
 
 function ProgressBar({ value }: { value: number }) {
   return (
-    <div className="h-2 w-full rounded-full bg-cream" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
+    <div className="h-1.5 w-full rounded-full bg-cream-dark/30" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
       <div
-        className="h-full rounded-full bg-sage transition-all duration-500 ease-out"
+        className="h-full rounded-full bg-sage transition-all duration-700 ease-out"
         style={{ width: `${value}%` }}
       />
     </div>
@@ -125,13 +125,13 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-ivory">
+    <div className="flex min-h-dvh flex-col bg-ivory bg-grain">
       <Navbar />
 
       <main className="flex-1">
-        <div className="section-container py-10 sm:py-14">
+        <div className="section-container py-12 sm:py-16">
           {/* Welcome */}
-          <section className="mb-10">
+          <section className="mb-12">
             <h1 className="font-display text-2xl sm:text-3xl text-charcoal">
               {sessionOrUserLoading ? (
                 <Skeleton variant="heading" className="h-9 max-w-xs sm:h-10" />
@@ -147,7 +147,7 @@ export default function DashboardPage() {
           </section>
 
           {/* Primary cards grid */}
-          <div className="grid gap-6 md:grid-cols-2 mb-8">
+          <div className="grid gap-6 md:grid-cols-2 mb-10">
             {/* Profile completion */}
             <Card>
               {sessionOrUserLoading ? (
@@ -213,13 +213,13 @@ export default function DashboardPage() {
           </div>
 
           {/* Quick actions */}
-          <section className="mb-10">
-            <h2 className="font-display text-lg text-charcoal mb-4">Quick actions</h2>
+          <section className="mb-12">
+            <h2 className="font-display text-lg text-charcoal mb-5">Quick actions</h2>
             <div className="grid gap-4 sm:grid-cols-3">
               <Card hover variant="outlined" className="group">
                 <Link href="/profile" className="block">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sage-pale text-olive">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-sage-pale/60 text-sage border border-sage-light/30">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                         <circle cx="12" cy="7" r="4" />
@@ -236,7 +236,7 @@ export default function DashboardPage() {
               <Card hover variant="outlined" className="group">
                 <Link href="/preferences" className="block">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-butter-pale text-espresso">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-butter-pale/70 text-espresso border border-butter-light/40">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <circle cx="12" cy="12" r="3" />
                         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
@@ -253,7 +253,7 @@ export default function DashboardPage() {
               <Card hover variant="outlined" className="group">
                 <Link href="/profile#contact" className="block">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-cream text-espresso">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-cream/70 text-espresso border border-border-light/50">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                         <polyline points="22,6 12,13 2,6" />
@@ -271,7 +271,7 @@ export default function DashboardPage() {
 
           {/* Account section */}
           <section>
-            <h2 className="font-display text-lg text-charcoal mb-4">Account</h2>
+            <h2 className="font-display text-lg text-charcoal mb-5">Account</h2>
             <Card variant="outlined">
               <div className="flex flex-col gap-5">
                 <div>

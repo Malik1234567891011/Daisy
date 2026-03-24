@@ -14,14 +14,14 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          "rounded-2xl bg-white p-6 transition-all duration-200",
+          "rounded-2xl bg-white p-6 sm:p-7 transition-all duration-300 ease-out",
 
-          variant === "default" && "border border-border-light shadow-sm",
-          variant === "elevated" && "border border-border-light shadow-md",
+          variant === "default" && "border border-border-light/80 shadow-card",
+          variant === "elevated" && "border border-border-light/60 shadow-md",
           variant === "outlined" && "border border-border shadow-none",
 
           hover &&
-            "hover:shadow-md hover:-translate-y-0.5 hover:border-border cursor-pointer",
+            "hover:shadow-card-hover hover:-translate-y-1 cursor-pointer",
 
           className
         )}

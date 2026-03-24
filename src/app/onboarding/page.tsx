@@ -222,8 +222,8 @@ export default function OnboardingPage() {
 
   return (
     <>
-      <div className="min-h-dvh bg-ivory">
-        <header className="flex items-center justify-between px-5 py-4 md:px-8 md:py-5">
+      <div className="min-h-dvh bg-ivory bg-grain">
+        <header className="flex items-center justify-between px-5 py-5 md:px-8 md:py-6">
           <DaisyLogo size="sm" />
           {currentStep < 8 && (
             <Button variant="ghost" size="sm" href="/">
@@ -233,7 +233,7 @@ export default function OnboardingPage() {
         </header>
 
         {currentStep < 8 && (
-          <div className="px-5 pb-6 md:px-8 md:pb-8">
+          <div className="px-5 pb-8 md:px-8 md:pb-10">
             <ProgressStepper
               currentStep={currentStep}
               totalSteps={7}
@@ -242,11 +242,11 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        <main className="flex justify-center px-5 pb-12 md:px-8">
+        <main className="flex justify-center px-5 pb-16 md:px-8">
           <div
             key={currentStep}
             className="w-full max-w-lg"
-            style={{ animation: "onboarding-enter 0.35s ease-out" }}
+            style={{ animation: "onboarding-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }}
           >
             {renderStep()}
           </div>
@@ -255,7 +255,7 @@ export default function OnboardingPage() {
 
       <style>{`
         @keyframes onboarding-enter {
-          from { opacity: 0; transform: translateY(8px); }
+          from { opacity: 0; transform: translateY(12px); }
           to   { opacity: 1; transform: translateY(0); }
         }
         @media (prefers-reduced-motion: reduce) {

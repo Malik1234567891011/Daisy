@@ -3,19 +3,12 @@ import { cn } from "@/lib/utils";
 import { SITE_NAME } from "@/lib/constants";
 
 const sizeConfig = {
-  sm: { text: "text-xl", flower: 16 },
-  md: { text: "text-2xl", flower: 20 },
-  lg: { text: "text-3xl", flower: 26 },
+  sm: { text: "text-xl", flower: 18 },
+  md: { text: "text-2xl", flower: 22 },
+  lg: { text: "text-3xl", flower: 28 },
 } as const;
 
-interface DaisyFlowerProps {
-  size?: number;
-  className?: string;
-}
-
-function DaisyFlower({ size = 20, className }: DaisyFlowerProps) {
-  const petals = [0, 60, 120, 180, 240, 300];
-
+function DaisyFlower({ size = 22, className }: { size?: number; className?: string }) {
   return (
     <svg
       width={size}
@@ -26,19 +19,19 @@ function DaisyFlower({ size = 20, className }: DaisyFlowerProps) {
       className={className}
       aria-hidden="true"
     >
-      {petals.map((angle) => (
+      {[0, 60, 120, 180, 240, 300].map((angle) => (
         <ellipse
           key={angle}
           cx="12"
           cy="7"
-          rx="2.5"
-          ry="4.8"
+          rx="2.6"
+          ry="5"
           fill="currentColor"
-          opacity="0.85"
+          opacity="0.8"
           transform={`rotate(${angle} 12 12)`}
         />
       ))}
-      <circle cx="12" cy="12" r="2.8" fill="var(--color-butter)" />
+      <circle cx="12" cy="12" r="3" fill="var(--color-butter)" />
     </svg>
   );
 }
@@ -55,7 +48,7 @@ export default function DaisyLogo({ size = "md", className }: DaisyLogoProps) {
     <Link
       href="/"
       className={cn(
-        "inline-flex items-center gap-1.5 transition-opacity hover:opacity-80 focus-visible:opacity-80",
+        "inline-flex items-center gap-1.5 transition-opacity duration-200 hover:opacity-75",
         className
       )}
       aria-label={`${SITE_NAME} — return to homepage`}

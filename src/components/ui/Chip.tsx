@@ -21,12 +21,13 @@ function Chip({
       aria-selected={selected}
       onClick={() => onToggle?.(!selected)}
       className={cn(
-        "inline-flex items-center rounded-full px-4 py-2 text-sm font-medium border transition-all duration-200 ease-out",
+        "inline-flex items-center rounded-full px-4 py-2 text-sm font-medium border",
+        "transition-all duration-200 ease-out",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2",
         "active:scale-[0.97]",
         selected
-          ? "bg-sage-pale border-sage text-olive"
-          : "bg-white border-border text-text-secondary hover:border-sage-light hover:text-charcoal",
+          ? "bg-sage-pale border-sage/40 text-olive shadow-xs"
+          : "bg-white border-border text-text-secondary hover:border-sage-light hover:text-charcoal hover:shadow-xs",
         className
       )}
       {...props}

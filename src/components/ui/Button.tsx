@@ -8,14 +8,14 @@ const variantStyles = {
   secondary:
     "bg-cream text-charcoal hover:bg-cream-dark border border-border active:bg-cream-dark/80",
   ghost:
-    "text-text-secondary hover:text-charcoal hover:bg-sage-pale/60 active:bg-sage-pale",
+    "text-text-secondary hover:text-charcoal hover:bg-sage-pale/50 active:bg-sage-pale/80",
   link: "text-sage hover:text-olive underline-offset-4 hover:underline !p-0 !h-auto shadow-none",
 } as const;
 
 const sizeStyles = {
-  sm: "h-9 px-4 text-sm rounded-full",
-  md: "h-11 px-6 text-sm rounded-full",
-  lg: "h-12 px-7 text-base rounded-full",
+  sm: "h-9 px-4 text-[13px] rounded-full gap-1.5",
+  md: "h-11 px-6 text-sm rounded-full gap-2",
+  lg: "h-[50px] px-8 text-[15px] rounded-full gap-2",
 } as const;
 
 type Variant = keyof typeof variantStyles;
@@ -45,10 +45,11 @@ const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonProps>(
     ref
   ) {
     const classes = cn(
-      "inline-flex items-center justify-center gap-2 font-medium whitespace-nowrap",
-      "transition-all duration-150 ease-out",
+      "inline-flex items-center justify-center font-medium whitespace-nowrap select-none",
+      "transition-all duration-200 ease-out",
       "focus-visible:outline-2 focus-visible:outline-sage focus-visible:outline-offset-2",
-      "disabled:pointer-events-none disabled:opacity-50",
+      "disabled:pointer-events-none disabled:opacity-40",
+      "active:scale-[0.98]",
       variantStyles[variant],
       variant !== "link" && sizeStyles[size],
       className

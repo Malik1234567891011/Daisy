@@ -56,10 +56,10 @@ export default function StepPreferences({
 
   return (
     <div className="pt-4 md:pt-8">
-      <h2 className="font-display text-3xl text-charcoal mb-2">
+      <h2 className="font-display text-3xl text-charcoal mb-2.5">
         What are you looking for?
       </h2>
-      <p className="text-text-secondary mb-8">
+      <p className="text-text-secondary mb-10">
         These help us match you better. You can change them anytime.
       </p>
 

@@ -6,10 +6,11 @@ import WhyDaisy from "@/components/landing/WhyDaisy";
 import TrustSafety from "@/components/landing/TrustSafety";
 import FAQ from "@/components/landing/FAQ";
 import FinalCTA from "@/components/landing/FinalCTA";
+import IntroAnimation from "@/components/landing/IntroAnimation";
 
 export default function Home() {
   return (
-    <>
+    <IntroAnimation>
       <Navbar />
       <main>
         <Hero />
@@ -20,6 +21,6 @@ export default function Home() {
         <FinalCTA />
       </main>
       <Footer />
-    </>
+    </IntroAnimation>
   );
 }
