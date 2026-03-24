@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  firstName     String?
+  school        String?
+  major         String?
+  age           Int?
+  gender        String?
+  ethnicity     String?
+
+  genderPreference    String?
+  schoolPreference    String?  @default("any")
+  ageRangeMin         Int?     @default(18)
+  ageRangeMax         Int?     @default(25)
+  majorPreference     String?
+  ethnicityPreference String?
+
+  contactMethod String?
+  contactValue  String?
+
+  onboardingComplete Boolean @default(false)
+}
