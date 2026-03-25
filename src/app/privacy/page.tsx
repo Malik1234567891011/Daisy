@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description:
+    "How Daisy Weekly protects your data. We collect only what's needed for matching and never sell your information.",
+};
 
 function Section({
   title,

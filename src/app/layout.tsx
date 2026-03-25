@@ -17,15 +17,48 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Daisy — Thoughtful Student Matching",
+  title: {
+    default: "Daisy Weekly — Student Matchmaking in Montreal",
+    template: "%s | Daisy Weekly",
+  },
   description:
-    "Daisy matches students with intention. No endless swiping, no awkward DMs — just thoughtful connections on your campus.",
-  metadataBase: new URL("https://joindaisy.com"),
+    "Daisy Weekly matches Montreal students with one thoughtful match every Wednesday. No swiping, no algorithms — just real connections on your campus.",
+  metadataBase: new URL("https://www.daisyweekly.com"),
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
-    title: "Daisy — Thoughtful Student Matching",
+    title: "Daisy Weekly — Student Matchmaking in Montreal",
     description:
-      "Meet someone worth meeting. Daisy pairs students based on real preferences, not algorithms designed to waste your time.",
+      "Every Wednesday, one match. Daisy Weekly pairs Montreal students based on real preferences — not algorithms designed to waste your time.",
     type: "website",
+    siteName: "Daisy Weekly",
+    url: "https://www.daisyweekly.com",
+    locale: "en_CA",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Daisy Weekly — Weekly student matchmaking in Montreal" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Daisy Weekly — Student Matchmaking in Montreal",
+    description:
+      "Every Wednesday, one match. Daisy Weekly pairs Montreal students based on real preferences.",
+    images: ["/opengraph-image"],
+  },
+  keywords: [
+    "Daisy Weekly",
+    "student matchmaking Montreal",
+    "Montreal student dating",
+    "weekly dating app students",
+    "campus matching Montreal",
+    "no swipe dating app",
+    "verified student dating",
+    "McGill dating",
+    "Concordia dating",
+    "CEGEP dating Montreal",
+  ],
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
@@ -36,7 +69,42 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${dmSerif.variable} ${inter.variable}`}>
-      <body><Providers>{children}</Providers></body>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "Organization",
+                  name: "Daisy Weekly",
+                  url: "https://www.daisyweekly.com",
+                  description:
+                    "Weekly student matchmaking service in Montreal. One thoughtful match every Wednesday.",
+                  sameAs: [],
+                },
+                {
+                  "@type": "WebSite",
+                  name: "Daisy Weekly",
+                  url: "https://www.daisyweekly.com",
+                  description:
+                    "Daisy Weekly matches Montreal students with one thoughtful match every Wednesday.",
+                  potentialAction: {
+                    "@type": "SearchAction",
+                    target:
+                      "https://www.daisyweekly.com/?q={search_term_string}",
+                    "query-input": "required name=search_term_string",
+                  },
+                },
+              ],
+            }),
+          }}
+        />
+      </head>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

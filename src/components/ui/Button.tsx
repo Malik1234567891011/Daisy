@@ -35,6 +35,7 @@ type ButtonAsButton = ButtonBaseProps &
 
 type ButtonAsLink = ButtonBaseProps & {
   href: string;
+  onClick?: React.MouseEventHandler<HTMLAnchorElement>;
 };
 
 type ButtonProps = ButtonAsButton | ButtonAsLink;

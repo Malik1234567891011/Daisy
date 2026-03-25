@@ -143,7 +143,7 @@ function WaitlistDashboard({ user, loading }: { user: UserData | null; loading: 
       <div className="rounded-xl border border-sage-light/30 bg-sage-pale/20 px-5 py-4 mb-6 flex items-start gap-3">
         <Bell className="w-4.5 h-4.5 text-sage mt-0.5 shrink-0" strokeWidth={1.8} />
         <div>
-          <p className="text-sm font-medium text-charcoal">First matches release Wednesday, April 8</p>
+          <p className="text-sm font-medium text-charcoal">Next match drop: {wedLabel}</p>
           <p className="text-xs text-text-secondary mt-0.5">You&rsquo;ll get a text when yours is ready.</p>
         </div>
       </div>

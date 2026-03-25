@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description:
+    "Terms of service for Daisy Weekly, the weekly student matchmaking service for Montreal campuses.",
+};
 
 function Section({
   title,
