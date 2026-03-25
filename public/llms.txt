@@ -1,0 +1,33 @@
+# Daisy Weekly
+
+> Weekly student matchmaking service in Montreal, Canada.
+
+Daisy Weekly matches Montreal students with one thoughtful match every Wednesday. No swiping, no algorithms — just real connections on your campus.
+
+## How It Works
+
+1. Students create a profile (name, school, photo, preferences)
+2. Every Wednesday at 6 PM, matches are released via SMS
+3. If both students are interested, contact info and a suggested meeting spot are revealed
+
+## Who It's For
+
+- Students at McGill University, Concordia University, Université de Montréal, UQAM, HEC Montréal
+- Students at 25+ CEGEPs across greater Montreal (Dawson, Vanier, Marianopolis, Brébeuf, etc.)
+- Anyone tired of dating app swiping culture who wants intentional, weekly matchmaking
+
+## Key Features
+
+- Student-only: every member is verified through their school
+- Weekly cadence: one match per week, every Wednesday
+- Privacy-first: no public profiles, contact shared only on mutual match
+- Campus-aware: suggests real meeting spots near both students' schools
+- Free for students during launch
+
+## Links
+
+- Homepage: https://www.daisyweekly.com
+- Sign up: https://www.daisyweekly.com/onboarding
+- Blog: https://www.daisyweekly.com/blog
+- Privacy Policy: https://www.daisyweekly.com/privacy
+- Terms of Service: https://www.daisyweekly.com/terms

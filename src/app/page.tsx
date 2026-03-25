@@ -7,13 +7,14 @@ import WhyDaisy from "@/components/landing/WhyDaisy";
 import TrustSafety from "@/components/landing/TrustSafety";
 import FAQ from "@/components/landing/FAQ";
 import FinalCTA from "@/components/landing/FinalCTA";
+import SEOContent from "@/components/landing/SEOContent";
 import IntroAnimation from "@/components/landing/IntroAnimation";
 import { FAQ_ITEMS } from "@/lib/constants";
 
 export const metadata: Metadata = {
-  title: "Daisy Weekly — One Match Every Wednesday | Student Dating Montreal",
+  title: "Student Dating Montreal | One Match Every Wednesday — Daisy Weekly",
   description:
-    "Daisy Weekly is a weekly student matchmaking service in Montreal. Every Wednesday, get one thoughtful match — no swiping, no algorithms. For McGill, Concordia, UdeM, and CEGEP students.",
+    "A smarter way to date in Montreal. One curated match every Wednesday for students at McGill, Concordia, UdeM, and 25+ CEGEPs. No swiping, no endless apps.",
   alternates: { canonical: "/" },
 };
 
@@ -42,6 +43,7 @@ export default function Home() {
           <WhyDaisy />
           <TrustSafety />
           <FAQ />
+          <SEOContent />
           <FinalCTA />
         </main>
         <Footer />

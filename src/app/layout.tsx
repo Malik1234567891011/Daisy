@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Serif_Display, Inter } from "next/font/google";
 import Providers from "./providers";
+import Analytics from "@/components/Analytics";
 import "./globals.css";
 
 const dmSerif = DM_Serif_Display({
@@ -82,7 +83,10 @@ export default function RootLayout({
                   url: "https://www.daisyweekly.com",
                   description:
                     "Weekly student matchmaking service in Montreal. One thoughtful match every Wednesday.",
-                  sameAs: [],
+                  sameAs: [
+                    "https://instagram.com/daisyweekly",
+                    "https://tiktok.com/@daisyweekly",
+                  ],
                 },
                 {
                   "@type": "WebSite",
@@ -90,12 +94,22 @@ export default function RootLayout({
                   url: "https://www.daisyweekly.com",
                   description:
                     "Daisy Weekly matches Montreal students with one thoughtful match every Wednesday.",
-                  potentialAction: {
-                    "@type": "SearchAction",
-                    target:
-                      "https://www.daisyweekly.com/?q={search_term_string}",
-                    "query-input": "required name=search_term_string",
+                },
+                {
+                  "@type": "LocalBusiness",
+                  name: "Daisy Weekly",
+                  description:
+                    "Weekly student matchmaking service for Montreal campuses. One curated match every Wednesday for students at McGill, Concordia, UdeM, and 25+ CEGEPs.",
+                  url: "https://www.daisyweekly.com",
+                  areaServed: {
+                    "@type": "City",
+                    name: "Montreal",
+                    containedInPlace: {
+                      "@type": "AdministrativeArea",
+                      name: "Quebec, Canada",
+                    },
                   },
+                  serviceType: "Student Matchmaking",
                 },
               ],
             }),
@@ -103,6 +117,7 @@ export default function RootLayout({
         />
       </head>
       <body>
+        <Analytics />
         <Providers>{children}</Providers>
       </body>
     </html>

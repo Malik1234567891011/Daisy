@@ -159,4 +159,29 @@
   .bg-grain {
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
   }
+
+  .prose-daisy p {
+    color: var(--color-text-secondary);
+    font-size: 0.9375rem;
+    line-height: 1.75;
+    margin-bottom: 1.25rem;
+  }
+
+  .prose-daisy h2 {
+    font-family: var(--font-display);
+    font-size: 1.375rem;
+    color: var(--color-charcoal);
+    margin-top: 2.5rem;
+    margin-bottom: 0.75rem;
+    font-weight: 400;
+  }
+
+  .prose-daisy strong {
+    color: var(--color-charcoal);
+    font-weight: 600;
+  }
+
+  .prose-daisy a {
+    transition: color 0.2s ease;
+  }
 }

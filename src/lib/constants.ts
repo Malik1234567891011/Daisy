@@ -1,6 +1,6 @@
 import { FAQItem } from "./types";
 
-export const SITE_NAME = "Daisy";
+export const SITE_NAME = "Daisy Weekly";
 
 export const NAV_LINKS = [
   { label: "How it works", href: "/#how-it-works" },
@@ -9,9 +9,9 @@ export const NAV_LINKS = [
 ] as const;
 
 export const HERO = {
-  headline: "Meet someone worth meeting.",
+  headline: "Student Dating in Montreal — One Match Every Wednesday",
   subheadline:
-    "Every Wednesday, Daisy matches you with one person — chosen carefully, not at random. No swiping, no algorithms. Just real connections on your campus.",
+    "Daisy Weekly matches you with one person every Wednesday — chosen carefully, not at random. No swiping, no algorithms. Just real connections on your campus.",
   cta: "Get started",
   ctaSecondary: "See how it works",
   trustBar: [
@@ -23,8 +23,8 @@ export const HERO = {
 };
 
 export const HOW_IT_WORKS = {
-  heading: "Three steps. That's it.",
-  subheading: "We kept it simple on purpose.",
+  heading: "How Daisy Works",
+  subheading: "Three steps, two minutes. We kept it simple on purpose.",
   steps: [
     {
       number: "01",
@@ -48,7 +48,7 @@ export const HOW_IT_WORKS = {
 };
 
 export const WHY_DAISY = {
-  heading: "Dating apps weren't built for this.",
+  heading: "Why Students Are Leaving Dating Apps",
   subheading:
     "Swiping is exhausting. Algorithms optimize for screen time, not real connection. Daisy does something different.",
   points: [
@@ -76,7 +76,7 @@ export const WHY_DAISY = {
 };
 
 export const SAFETY = {
-  heading: "Built around how safe you feel.",
+  heading: "Trust & Safety",
   subheading:
     "Trust isn't a feature — it's the foundation. Here's how we protect every member.",
   cards: [
@@ -153,22 +153,67 @@ export const FINAL_CTA = {
   cta: "Create your profile",
 };
 
+export const SEO_CONTENT = {
+  studentDating: {
+    heading: "Student Dating in Montreal",
+    paragraphs: [
+      "Dating as a student in Montreal has become increasingly frustrating. Between Tinder, Bumble, Hinge, and every other app promising to find you love, the experience has devolved into an endless scroll of faces that blur together. You swipe right on a hundred people, match with a dozen, have conversations with three, and meet up with maybe one — who turns out to be nothing like their profile.",
+      "Montreal is one of the best student cities in the world. Between McGill, Concordia, Université de Montréal, UQAM, and dozens of CEGEPs, there are over 200,000 students living here. You'd think meeting someone would be easy. But dating apps have made it paradoxically harder — more options, less intention, and a culture that treats people like products on a shelf.",
+      "That's why we built Daisy Weekly. Instead of giving you a feed to swipe through, we give you one match every Wednesday. One person, chosen based on what actually matters to both of you — your school, your interests, what you're looking for, and when you're free. It forces intention. It removes the tyranny of infinite choice. And it actually works.",
+    ],
+  },
+  whyWeekly: {
+    heading: "Why Weekly Matchmaking Works Better Than Swiping",
+    paragraphs: [
+      "There's a reason dating apps keep you swiping — it makes them money. Every extra minute you spend on the app is ad revenue or a reason to sell you a premium subscription. They're not optimized for you to find someone. They're optimized for you to keep looking.",
+      "Weekly matchmaking flips that model entirely. When you only get one match per week, you actually pay attention. You read their profile. You think about whether you're interested. You make a real decision instead of an impulse swipe. Research in behavioral psychology consistently shows that fewer, higher-quality options lead to better decision-making and higher satisfaction.",
+      "Every Wednesday at 6 PM, Daisy drops your match. You get a text. You see their profile — first name, age, school, a photo, and a few details about what they're into. If you're both interested, we reveal how to connect and suggest a place to meet. If not, no pressure. Next Wednesday, a new match.",
+    ],
+  },
+  whoItsFor: {
+    heading: "Who Daisy Weekly Is For",
+    items: [
+      {
+        subtitle: "McGill, Concordia & Montreal Universities",
+        text: "Whether you're an undergrad at McGill, a graduate student at Concordia, studying at UdeM, or doing your MBA at HEC Montréal, Daisy Weekly connects you with students across Montreal's universities. Every member is verified through their school, so you know you're meeting real people.",
+      },
+      {
+        subtitle: "CEGEP Students Across Greater Montreal",
+        text: "From Dawson and Vanier to Marianopolis and Brébeuf, CEGEP students are a huge part of Daisy. Whether you're in your first year or about to transfer to university, you'll match with other students who are at a similar point in their lives — something no other dating app offers.",
+      },
+      {
+        subtitle: "Anyone Tired of Swiping Culture",
+        text: "If you've ever deleted a dating app in frustration, Daisy was built for you. No infinite scrolling, no algorithm gaming, no premium paywalls. Just one thoughtful match per week, delivered at the same time, with the same simplicity. The way meeting someone should feel.",
+      },
+    ],
+  },
+  whyDifferent: {
+    heading: "Why Daisy Is Different",
+    paragraphs: [
+      "Most dating apps treat students the same as everyone else. But student dating is fundamentally different — you're in a specific community, your schedule is unique, and your social world revolves around campus. Daisy is built specifically for this context.",
+      "We don't have public profiles. Your information isn't browsable by strangers. Only your matched partner sees what you've chosen to share — and only after you've both said yes. That means no weird messages from people you never swiped on, no screenshots floating around, and no one from your class stumbling on your profile.",
+      "We also suggest real meeting spots based on the schools you both attend. A café near Concordia's Hall building. A park near McGill's campus. A study spot in the Plateau. Because the point isn't to chat forever in an app — it's to actually meet.",
+    ],
+  },
+};
+
 export const FOOTER = {
-  tagline: "Thoughtful connections for students who want something better.",
+  tagline: "Weekly student matchmaking in Montreal. One thoughtful match every Wednesday — for students who want something better than swiping.",
   links: {
     product: [
-      { label: "How it works", href: "#how-it-works" },
-      { label: "Safety", href: "#safety" },
-      { label: "FAQ", href: "#faq" },
+      { label: "How it works", href: "/#how-it-works" },
+      { label: "Safety", href: "/#safety" },
+      { label: "FAQ", href: "/#faq" },
+      { label: "Blog", href: "/blog" },
     ],
     legal: [
       { label: "Privacy policy", href: "/privacy" },
       { label: "Terms of service", href: "/terms" },
     ],
     connect: [
-      { label: "Instagram", href: "#" },
-      { label: "Twitter", href: "#" },
-      { label: "Contact us", href: "mailto:hello@joindaisy.com" },
+      { label: "Instagram", href: "https://instagram.com/daisyweekly" },
+      { label: "TikTok", href: "https://tiktok.com/@daisyweekly" },
+      { label: "Contact us", href: "mailto:hello@daisyweekly.com" },
     ],
   },
 };
