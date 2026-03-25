@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("photo") as File | null;
 
-    if (!file) {
+    if (!file || file.size === 0) {
       return NextResponse.json(
         { error: "No file provided" },
         { status: 400 },
@@ -37,12 +37,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const ext = file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1];
-    const filename = `photos/${session.user.id}.${ext}`;
+    const ext = file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
+    const filename = `photos/${session.user.id}-${Date.now()}.${ext}`;
 
-    const blob = await put(filename, file, {
+    // Convert File to Buffer for reliable serverless upload
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    const blob = await put(filename, buffer, {
       access: "public",
-      addRandomSuffix: false,
+      contentType: file.type,
     });
 
     await prisma.user.update({
@@ -51,10 +55,11 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ url: blob.url });
-  } catch (err) {
-    console.error("Upload error:", err);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("Upload error:", message);
     return NextResponse.json(
-      { error: "Upload failed" },
+      { error: message },
       { status: 500 },
     );
   }
