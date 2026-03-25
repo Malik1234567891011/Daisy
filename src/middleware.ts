@@ -8,7 +8,18 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (PROTECTED.some((p) => pathname.startsWith(p))) {
-    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    const isSecure = req.nextUrl.protocol === "https:";
+    const cookieName = isSecure
+      ? "__Secure-authjs.session-token"
+      : "authjs.session-token";
+
+    const token = await getToken({
+      req,
+      secret: process.env.AUTH_SECRET,
+      cookieName,
+      salt: cookieName,
+    });
+
     if (!token) {
       const loginUrl = new URL("/login", req.url);
       loginUrl.searchParams.set("callbackUrl", pathname);

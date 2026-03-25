@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -301,20 +300,16 @@ function WaitlistDashboard({ user, loading, error }: { user: UserData | null; lo
 
 /* ─── Main Page ─── */
 export default function DashboardPage() {
-  const router = useRouter();
   const { status } = useSession();
   const [user, setUser] = useState<UserData | null>(null);
-  const [userLoading, setUserLoading] = useState(false);
+  const [userLoading, setUserLoading] = useState(true);
   const [userError, setUserError] = useState(false);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/login");
+    if (status !== "authenticated") {
+      if (status === "unauthenticated") setUserLoading(false);
+      return;
     }
-  }, [status, router]);
-
-  useEffect(() => {
-    if (status !== "authenticated") return;
 
     let cancelled = false;
     setUserLoading(true);
@@ -322,16 +317,11 @@ export default function DashboardPage() {
 
     fetch("/api/user")
       .then(async (res) => {
-        if (res.status === 401) {
-          router.replace("/login");
-          return null;
-        }
         if (!res.ok) throw new Error("Failed to load user");
         return res.json() as Promise<UserData>;
       })
       .then((data) => {
-        if (cancelled || data === null) return;
-        setUser(data);
+        if (!cancelled) setUser(data);
       })
       .catch(() => {
         if (!cancelled) setUserError(true);
@@ -341,14 +331,11 @@ export default function DashboardPage() {
       });
 
     return () => { cancelled = true; };
-  }, [status, router]);
+  }, [status]);
 
-  if (status === "unauthenticated") return null;
-
-  const isLoading = status === "loading" || (status === "authenticated" && userLoading);
+  const isLoading = status === "loading" || userLoading;
 
   // TODO: when matching is implemented, check user.hasMatch or similar
-  // and render <MatchedDashboard /> instead
   const hasMatch = false;
 
   return (
@@ -357,7 +344,6 @@ export default function DashboardPage() {
 
       <main className="flex-1">
         {hasMatch ? (
-          // Future: matched dashboard with match details
           <div className="section-container py-16 text-center">
             <p>Matched dashboard coming soon</p>
           </div>
