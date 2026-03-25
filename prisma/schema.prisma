@@ -32,6 +32,8 @@ model User {
   contactMethod String?
   contactValue  String?
 
+  photoUrl       String?
+
   phoneNumber    String?  @unique
   phoneVerified  Boolean  @default(false)
   verifiedAt     DateTime?

@@ -19,12 +19,13 @@ import StepIdentity from "@/components/onboarding/StepIdentity";
 import StepPreferences from "@/components/onboarding/StepPreferences";
 import StepContact from "@/components/onboarding/StepContact";
 import StepReview from "@/components/onboarding/StepReview";
+import StepPhoto from "@/components/onboarding/StepPhoto";
 import StepPhone from "@/components/onboarding/StepPhone";
 import StepOTP from "@/components/onboarding/StepOTP";
 import StepSuccess from "@/components/onboarding/StepSuccess";
 
-const TOTAL_PROGRESS_STEPS = 9;
-const CINEMATIC_STEP = 10;
+const TOTAL_PROGRESS_STEPS = 10;
+const CINEMATIC_STEP = 11;
 
 const INITIAL_DATA: OnboardingData = {
   email: "",
@@ -96,7 +97,7 @@ export default function OnboardingPage() {
     }));
   }, []);
 
-  // Step 7: Review → create account + sign in → advance to phone step
+  // Step 7: Review → create account + sign in → advance to photo step
   const handleSignup = useCallback(async () => {
     setSignupError("");
     setIsSubmitting(true);
@@ -142,7 +143,6 @@ export default function OnboardingPage() {
         );
       }
 
-      // Advance to phone verification step
       setCurrentStep(8);
     } catch (err) {
       setSignupError(
@@ -226,6 +226,13 @@ export default function OnboardingPage() {
         );
       case 8:
         return (
+          <StepPhoto
+            onUploaded={goForward}
+            onBack={goBack}
+          />
+        );
+      case 9:
+        return (
           <StepPhone
             phone={phone}
             onPhoneChange={setPhone}
@@ -233,7 +240,7 @@ export default function OnboardingPage() {
             onBack={goBack}
           />
         );
-      case 9:
+      case 10:
         return (
           <StepOTP
             phone={phone}
@@ -254,7 +261,7 @@ export default function OnboardingPage() {
         {showHeader && (
           <header className="flex items-center justify-between px-5 py-5 md:px-8 md:py-6">
             <DaisyLogo size="sm" />
-            {currentStep < 8 && (
+            {currentStep <= 7 && (
               <Button variant="ghost" size="sm" href="/">
                 Save &amp; exit
               </Button>

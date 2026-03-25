@@ -274,7 +274,8 @@ export const ONBOARDING_STEPS = [
   { id: 5, label: "Preferences", description: "What you're looking for" },
   { id: 6, label: "Contact", description: "How to reach you" },
   { id: 7, label: "Review", description: "Look it over" },
-  { id: 8, label: "Phone", description: "Verify your number" },
-  { id: 9, label: "Verify", description: "Enter code" },
-  { id: 10, label: "Done", description: "You're in" },
+  { id: 8, label: "Photo", description: "Add a photo" },
+  { id: 9, label: "Phone", description: "Verify your number" },
+  { id: 10, label: "Verify", description: "Enter code" },
+  { id: 11, label: "Done", description: "You're in" },
 ];
