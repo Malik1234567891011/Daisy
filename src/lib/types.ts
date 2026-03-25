@@ -7,6 +7,14 @@ export interface UserProfile {
   ethnicity?: string;
 }
 
+export interface PersonalityData {
+  intentions: string;
+  vibe: string;
+  interests: string[];
+  idealHangout: string;
+  availability: string[];
+}
+
 export interface UserPreferences {
   genderPreference: string;
   schoolPreference: "same" | "nearby" | "any";
@@ -26,8 +34,10 @@ export interface OnboardingData {
   email: string;
   password: string;
   profile: UserProfile;
+  personality: PersonalityData;
   preferences: UserPreferences;
   contact: ContactPreference;
+  referralSource?: string;
 }
 
 export interface FAQItem {

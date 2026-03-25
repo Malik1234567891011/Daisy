@@ -11,12 +11,12 @@ export const NAV_LINKS = [
 export const HERO = {
   headline: "Meet someone worth meeting.",
   subheadline:
-    "Daisy matches students with intention — no endless swiping, no awkward DMs. Just thoughtful connections on your campus.",
+    "Every Wednesday, Daisy matches you with one person — chosen carefully, not at random. No swiping, no algorithms. Just real connections on your campus.",
   cta: "Get started",
   ctaSecondary: "See how it works",
   trustBar: [
     "Student-only",
-    "School verified",
+    "Weekly drops",
     "Privacy-first",
     "No public profiles",
   ],
@@ -30,19 +30,19 @@ export const HOW_IT_WORKS = {
       number: "01",
       title: "Build your profile",
       description:
-        "Share your name, school, and major. Add a few preferences — or don't. We ask for less than you'd think.",
+        "Share your name, school, and a photo. Answer a few questions about what you're looking for. Takes about 2 minutes.",
     },
     {
       number: "02",
-      title: "Set your preferences",
+      title: "Wait for Wednesday",
       description:
-        "Tell us what matters to you in a match. School, age range, shared interests — you're in control of every detail.",
+        "Every Wednesday at 6 PM, matches drop. We'll text you when yours is ready. No checking, no refreshing.",
     },
     {
       number: "03",
-      title: "Get matched",
+      title: "Say yes, get connected",
       description:
-        "We pair you thoughtfully based on what you both want. When there's a match, we'll connect you on your terms.",
+        "See your match's profile. If you're both interested, we'll reveal how to reach each other — plus a suggested place to meet.",
     },
   ],
 };
@@ -112,7 +112,7 @@ export const FAQ_ITEMS: FAQItem[] = [
   {
     question: "How does matching actually work?",
     answer:
-      "After you complete your profile and preferences, our matching system considers what matters to both people — school, interests, preferences — and pairs you with someone compatible. No swiping involved.",
+      "Every Wednesday at 6 PM, we release matches. We pair you with one person based on what matters to both of you — school, interests, intentions, and preferences. If you're both interested, we connect you. No swiping involved.",
   },
   {
     question: "What information do I have to share?",
@@ -149,7 +149,7 @@ export const FAQ_ITEMS: FAQItem[] = [
 export const FINAL_CTA = {
   heading: "Ready to meet someone real?",
   subheading:
-    "Join thousands of students who are done with swiping and ready for something that actually works.",
+    "Join students across Montreal who are done with swiping. Next match drop is this Wednesday.",
   cta: "Create your profile",
 };
 
@@ -253,6 +253,41 @@ export const GENDER_PREFERENCES = [
   "Everyone",
 ];
 
+export const INTENTIONS = [
+  { value: "serious", label: "Something serious", emoji: "💛" },
+  { value: "casual", label: "Casual dating", emoji: "🌿" },
+  { value: "friends", label: "New friends", emoji: "🤝" },
+  { value: "open", label: "Open to anything", emoji: "✨" },
+];
+
+export const VIBES = [
+  { value: "homebody", label: "Homebody", emoji: "🏠" },
+  { value: "social", label: "Social butterfly", emoji: "🦋" },
+  { value: "balanced", label: "Somewhere in between", emoji: "⚖️" },
+];
+
+export const INTERESTS = [
+  "Music", "Movies", "Sports", "Fitness", "Food", "Travel",
+  "Art", "Gaming", "Reading", "Nightlife", "Photography",
+  "Cooking", "Nature", "Fashion", "Podcasts", "Volunteering",
+  "Coffee culture", "Board games", "Dancing", "Thrifting",
+];
+
+export const IDEAL_HANGOUTS = [
+  { value: "coffee", label: "Coffee", emoji: "☕" },
+  { value: "drinks", label: "Drinks", emoji: "🍷" },
+  { value: "walk", label: "Walk in the park", emoji: "🌳" },
+  { value: "study", label: "Study date", emoji: "📚" },
+  { value: "food", label: "Food spot", emoji: "🍜" },
+];
+
+export const AVAILABILITY = [
+  { value: "weekday-evenings", label: "Weekday evenings" },
+  { value: "weekends", label: "Weekends" },
+  { value: "mornings", label: "Mornings" },
+  { value: "flexible", label: "Flexible" },
+];
+
 export const ETHNICITIES = [
   "Asian",
   "Black / African American",
@@ -271,11 +306,13 @@ export const ONBOARDING_STEPS = [
   { id: 2, label: "Account", description: "Your email" },
   { id: 3, label: "Profile", description: "The basics" },
   { id: 4, label: "Identity", description: "Optional details" },
-  { id: 5, label: "Preferences", description: "What you're looking for" },
-  { id: 6, label: "Contact", description: "How to reach you" },
-  { id: 7, label: "Review", description: "Look it over" },
-  { id: 8, label: "Photo", description: "Add a photo" },
-  { id: 9, label: "Phone", description: "Verify your number" },
-  { id: 10, label: "Verify", description: "Enter code" },
-  { id: 11, label: "Done", description: "You're in" },
+  { id: 5, label: "You", description: "What you're about" },
+  { id: 6, label: "Interests", description: "What you enjoy" },
+  { id: 7, label: "Preferences", description: "What you're looking for" },
+  { id: 8, label: "Contact", description: "How to reach you" },
+  { id: 9, label: "Review", description: "Look it over" },
+  { id: 10, label: "Photo", description: "Add a photo" },
+  { id: 11, label: "Phone", description: "Verify your number" },
+  { id: 12, label: "Verify", description: "Enter code" },
+  { id: 13, label: "Done", description: "You're in" },
 ];

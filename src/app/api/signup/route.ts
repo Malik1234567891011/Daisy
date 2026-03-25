@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { nanoid } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, password, firstName, school, major, age, gender, ethnicity, genderPreference, schoolPreference, ageRangeMin, ageRangeMax, majorPreference, ethnicityPreference, contactMethod, contactValue } = body;
+    const {
+      email, password, firstName, school, major, age, gender, ethnicity,
+      intentions, vibe, interests, idealHangout, availability,
+      genderPreference, schoolPreference, ageRangeMin, ageRangeMax,
+      majorPreference, ethnicityPreference, contactMethod, contactValue,
+      referralSource,
+    } = body;
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
@@ -19,6 +26,7 @@ export async function POST(req: NextRequest) {
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
+    const referralCode = nanoid(8);
 
     const user = await prisma.user.create({
       data: {
@@ -30,6 +38,11 @@ export async function POST(req: NextRequest) {
         age: age ? parseInt(age, 10) : null,
         gender: gender || null,
         ethnicity: ethnicity || null,
+        intentions: intentions || null,
+        vibe: vibe || null,
+        interests: Array.isArray(interests) ? interests : [],
+        idealHangout: idealHangout || null,
+        availability: Array.isArray(availability) ? availability : [],
         genderPreference: genderPreference || null,
         schoolPreference: schoolPreference || "any",
         ageRangeMin: ageRangeMin ? parseInt(ageRangeMin, 10) : 18,
@@ -38,6 +51,9 @@ export async function POST(req: NextRequest) {
         ethnicityPreference: ethnicityPreference || null,
         contactMethod: contactMethod || null,
         contactValue: contactValue || null,
+        referralCode,
+        referredBy: referralSource || null,
+        smsConsent: true,
         onboardingComplete: true,
       },
     });

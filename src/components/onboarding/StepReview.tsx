@@ -2,6 +2,7 @@
 
 import { Card } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import { INTENTIONS, VIBES, IDEAL_HANGOUTS, AVAILABILITY } from "@/lib/constants";
 import type { OnboardingData } from "@/lib/types";
 
 interface StepReviewProps {
@@ -30,6 +31,10 @@ function mask(value: string): string {
   return value.slice(0, 3) + "\u2022".repeat(Math.min(value.length - 3, 6));
 }
 
+function getLabel(list: { value: string; label: string }[], value: string): string {
+  return list.find((i) => i.value === value)?.label ?? value;
+}
+
 function SectionHeader({
   title,
   step,
@@ -55,13 +60,7 @@ function SectionHeader({
   );
 }
 
-function InfoRow({
-  label,
-  value,
-}: {
-  label: string;
-  value?: string | null;
-}) {
+function InfoRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
     <div className="flex justify-between py-1.5">
@@ -81,7 +80,7 @@ export default function StepReview({
   loading,
   error,
 }: StepReviewProps) {
-  const { profile, preferences, contact } = data;
+  const { profile, personality, preferences, contact } = data;
 
   return (
     <div className="pt-4 md:pt-8">
@@ -110,7 +109,34 @@ export default function StepReview({
         )}
 
         <Card>
-          <SectionHeader title="Preferences" step={5} goToStep={goToStep} />
+          <SectionHeader title="About you" step={5} goToStep={goToStep} />
+          <InfoRow label="Looking for" value={getLabel(INTENTIONS, personality.intentions)} />
+          <InfoRow label="Social energy" value={getLabel(VIBES, personality.vibe)} />
+          <InfoRow label="Ideal hangout" value={getLabel(IDEAL_HANGOUTS, personality.idealHangout)} />
+          {personality.interests.length > 0 && (
+            <div className="py-1.5">
+              <span className="text-sm text-text-tertiary">Interests</span>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {personality.interests.map((i) => (
+                  <span key={i} className="text-xs bg-cream/60 border border-border rounded-full px-2.5 py-1 text-text-secondary">
+                    {i}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {personality.availability.length > 0 && (
+            <InfoRow
+              label="Availability"
+              value={personality.availability
+                .map((a) => AVAILABILITY.find((av) => av.value === a)?.label ?? a)
+                .join(", ")}
+            />
+          )}
+        </Card>
+
+        <Card>
+          <SectionHeader title="Preferences" step={7} goToStep={goToStep} />
           <InfoRow label="Interested in" value={preferences.genderPreference} />
           <InfoRow
             label="School"
@@ -131,7 +157,7 @@ export default function StepReview({
         </Card>
 
         <Card>
-          <SectionHeader title="Contact" step={6} goToStep={goToStep} />
+          <SectionHeader title="Contact" step={8} goToStep={goToStep} />
           <InfoRow label="Method" value={CONTACT_LABELS[contact.method]} />
           <InfoRow label="Details" value={mask(contact.value)} />
         </Card>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import DaisyLogo from "@/components/layout/DaisyLogo";
 import Button from "@/components/ui/Button";
@@ -10,12 +11,15 @@ import type {
   OnboardingData,
   UserProfile,
   UserPreferences,
+  PersonalityData,
   ContactPreference,
 } from "@/lib/types";
 import StepWelcome from "@/components/onboarding/StepWelcome";
 import StepAccount from "@/components/onboarding/StepAccount";
 import StepProfile from "@/components/onboarding/StepProfile";
 import StepIdentity from "@/components/onboarding/StepIdentity";
+import StepPersonality from "@/components/onboarding/StepPersonality";
+import StepInterests from "@/components/onboarding/StepInterests";
 import StepPreferences from "@/components/onboarding/StepPreferences";
 import StepContact from "@/components/onboarding/StepContact";
 import StepReview from "@/components/onboarding/StepReview";
@@ -24,8 +28,8 @@ import StepPhone from "@/components/onboarding/StepPhone";
 import StepOTP from "@/components/onboarding/StepOTP";
 import StepSuccess from "@/components/onboarding/StepSuccess";
 
-const TOTAL_PROGRESS_STEPS = 10;
-const CINEMATIC_STEP = 11;
+const TOTAL_PROGRESS_STEPS = 12;
+const CINEMATIC_STEP = 13;
 
 const INITIAL_DATA: OnboardingData = {
   email: "",
@@ -36,6 +40,13 @@ const INITIAL_DATA: OnboardingData = {
     major: "",
     age: null,
     gender: "",
+  },
+  personality: {
+    intentions: "",
+    vibe: "",
+    interests: [],
+    idealHangout: "",
+    availability: [],
   },
   preferences: {
     genderPreference: "",
@@ -50,11 +61,29 @@ const INITIAL_DATA: OnboardingData = {
 };
 
 export default function OnboardingPage() {
+  return (
+    <Suspense>
+      <OnboardingInner />
+    </Suspense>
+  );
+}
+
+function OnboardingInner() {
+  const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
-  const [data, setData] = useState<OnboardingData>(INITIAL_DATA);
+  const [data, setData] = useState<OnboardingData>(() => {
+    const ref = searchParams.get("ref") ?? undefined;
+    return { ...INITIAL_DATA, referralSource: ref };
+  });
   const [phone, setPhone] = useState("");
   const [signupError, setSignupError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Capture referral from URL if it changes
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) setData((prev) => ({ ...prev, referralSource: ref }));
+  }, [searchParams]);
 
   const goForward = useCallback(() => {
     setCurrentStep((s) => Math.min(s + 1, CINEMATIC_STEP));
@@ -83,6 +112,13 @@ export default function OnboardingPage() {
     }));
   }, []);
 
+  const updatePersonality = useCallback((updates: Partial<PersonalityData>) => {
+    setData((prev) => ({
+      ...prev,
+      personality: { ...prev.personality, ...updates },
+    }));
+  }, []);
+
   const updatePreferences = useCallback((updates: Partial<UserPreferences>) => {
     setData((prev) => ({
       ...prev,
@@ -97,7 +133,6 @@ export default function OnboardingPage() {
     }));
   }, []);
 
-  // Step 7: Review → create account + sign in → advance to photo step
   const handleSignup = useCallback(async () => {
     setSignupError("");
     setIsSubmitting(true);
@@ -115,6 +150,11 @@ export default function OnboardingPage() {
           age: String(data.profile.age ?? ""),
           gender: data.profile.gender,
           ethnicity: data.profile.ethnicity ?? "",
+          intentions: data.personality.intentions,
+          vibe: data.personality.vibe,
+          interests: data.personality.interests,
+          idealHangout: data.personality.idealHangout,
+          availability: data.personality.availability,
           genderPreference: data.preferences.genderPreference,
           schoolPreference: data.preferences.schoolPreference,
           ageRangeMin: String(data.preferences.ageRange.min),
@@ -123,6 +163,7 @@ export default function OnboardingPage() {
           ethnicityPreference: data.preferences.ethnicityPreference ?? "",
           contactMethod: data.contact.method,
           contactValue: data.contact.value,
+          referralSource: data.referralSource ?? "",
         }),
       });
 
@@ -143,7 +184,7 @@ export default function OnboardingPage() {
         );
       }
 
-      setCurrentStep(8);
+      setCurrentStep(10);
     } catch (err) {
       setSignupError(
         err instanceof Error ? err.message : "Something went wrong.",
@@ -196,6 +237,24 @@ export default function OnboardingPage() {
         );
       case 5:
         return (
+          <StepPersonality
+            personality={data.personality}
+            onPersonalityChange={updatePersonality}
+            onNext={goForward}
+            onBack={goBack}
+          />
+        );
+      case 6:
+        return (
+          <StepInterests
+            personality={data.personality}
+            onPersonalityChange={updatePersonality}
+            onNext={goForward}
+            onBack={goBack}
+          />
+        );
+      case 7:
+        return (
           <StepPreferences
             preferences={data.preferences}
             onPreferencesChange={updatePreferences}
@@ -203,7 +262,7 @@ export default function OnboardingPage() {
             onBack={goBack}
           />
         );
-      case 6:
+      case 8:
         return (
           <StepContact
             contact={data.contact}
@@ -213,7 +272,7 @@ export default function OnboardingPage() {
             onBack={goBack}
           />
         );
-      case 7:
+      case 9:
         return (
           <StepReview
             data={data}
@@ -224,14 +283,14 @@ export default function OnboardingPage() {
             error={signupError}
           />
         );
-      case 8:
+      case 10:
         return (
           <StepPhoto
             onUploaded={goForward}
             onBack={goBack}
           />
         );
-      case 9:
+      case 11:
         return (
           <StepPhone
             phone={phone}
@@ -240,7 +299,7 @@ export default function OnboardingPage() {
             onBack={goBack}
           />
         );
-      case 10:
+      case 12:
         return (
           <StepOTP
             phone={phone}
@@ -261,7 +320,7 @@ export default function OnboardingPage() {
         {showHeader && (
           <header className="flex items-center justify-between px-5 py-5 md:px-8 md:py-6">
             <DaisyLogo size="sm" />
-            {currentStep <= 7 && (
+            {currentStep <= 9 && (
               <Button variant="ghost" size="sm" href="/">
                 Save &amp; exit
               </Button>

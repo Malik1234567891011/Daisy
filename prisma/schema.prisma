@@ -15,13 +15,23 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // Profile basics
   firstName     String?
   school        String?
   major         String?
   age           Int?
   gender        String?
   ethnicity     String?
+  photoUrl      String?
 
+  // Personality & compatibility signals
+  intentions    String?   // casual / serious / friends / open
+  vibe          String?   // homebody / social / balanced
+  interests     String[]  // multi-select tags
+  idealHangout  String?   // coffee / drinks / walk / study / food
+  availability  String[]  // weekday-evenings, weekends, flexible, mornings
+
+  // Match preferences
   genderPreference    String?
   schoolPreference    String?  @default("any")
   ageRangeMin         Int?     @default(18)
@@ -29,14 +39,70 @@ model User {
   majorPreference     String?
   ethnicityPreference String?
 
+  // Contact
   contactMethod String?
   contactValue  String?
 
-  photoUrl       String?
-
+  // Phone verification
   phoneNumber    String?  @unique
   phoneVerified  Boolean  @default(false)
   verifiedAt     DateTime?
+  smsConsent     Boolean  @default(false)
+
+  // Referral tracking
+  referralCode   String?  @unique
+  referredBy     String?
 
   onboardingComplete Boolean @default(false)
+
+  // Match relations
+  matchesAsA Match[] @relation("matchUserA")
+  matchesAsB Match[] @relation("matchUserB")
+}
+
+model Match {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  dropDate  DateTime
+
+  userAId       String
+  userA         User          @relation("matchUserA", fields: [userAId], references: [id])
+  userADecision MatchDecision @default(PENDING)
+
+  userBId       String
+  userB         User          @relation("matchUserB", fields: [userBId], references: [id])
+  userBDecision MatchDecision @default(PENDING)
+
+  status MatchStatus @default(PENDING)
+
+  suggestedSpotId String?
+  suggestedSpot   MeetingSpot? @relation(fields: [suggestedSpotId], references: [id])
+
+  @@index([userAId])
+  @@index([userBId])
+  @@index([dropDate])
+}
+
+model MeetingSpot {
+  id           String   @id @default(cuid())
+  name         String
+  type         String   // cafe, park, restaurant, bar, etc.
+  neighborhood String
+  schools      String[] // associated school names
+  description  String?
+  address      String?
+  matches      Match[]
+}
+
+enum MatchDecision {
+  PENDING
+  INTERESTED
+  DECLINED
+}
+
+enum MatchStatus {
+  PENDING
+  MUTUAL
+  EXPIRED
+  DECLINED
 }

@@ -144,12 +144,13 @@ export default function Navbar() {
         aria-modal="true"
         aria-label="Mobile navigation"
         className={cn(
-          "fixed inset-x-0 top-[68px] bottom-0 z-40 bg-ivory lg:hidden",
+          "fixed inset-x-0 top-[68px] bottom-0 z-[100] lg:hidden",
           "transition-all duration-300 ease-out",
           menuOpen
             ? "opacity-100 visible translate-y-0"
             : "opacity-0 invisible -translate-y-2"
         )}
+        style={{ backgroundColor: "#FFFDF7" }}
       >
         <nav className="flex h-full flex-col px-6 pt-10 pb-10">
           <ul className="flex flex-col gap-1" role="list">

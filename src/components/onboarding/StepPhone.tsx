@@ -107,10 +107,22 @@ export default function StepPhone({
         />
       </div>
 
-      <p className="text-xs text-text-tertiary mb-8">
-        Standard message rates may apply. We&rsquo;ll only text you for
-        verification.
+      <p className="text-xs text-text-tertiary mb-4">
+        We&rsquo;ll use this number to send match alerts and important Daisy updates.
+        Standard message rates may apply.
       </p>
+
+      <label className="flex items-start gap-2.5 mb-8 cursor-pointer">
+        <input
+          type="checkbox"
+          defaultChecked
+          className="mt-0.5 h-4 w-4 rounded border-border text-sage focus:ring-sage-light/60 accent-sage"
+        />
+        <span className="text-xs text-text-secondary leading-relaxed">
+          I agree to receive SMS notifications for match drops and important updates from Daisy.
+          You can opt out anytime.
+        </span>
+      </label>
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 mb-6">

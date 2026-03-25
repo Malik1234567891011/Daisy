@@ -1,79 +1,103 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
-import { Users, Send, Clock, Sparkles, User, Settings, Mail } from "lucide-react";
+import {
+  Users, Send, Sparkles, User, Settings, Mail, Heart, X,
+  MapPin, Clock, Bell, Calendar,
+} from "lucide-react";
+import { INTENTIONS, VIBES, IDEAL_HANGOUTS } from "@/lib/constants";
 
+/* ─── Types ─── */
 type UserData = {
   id: string;
   email: string;
   firstName: string | null;
   school: string | null;
-  major: string | null;
-  age: number | null;
-  ethnicity: string | null;
-  schoolPreference: string | null;
-  ageRangeMin: number | null;
-  ageRangeMax: number | null;
-  majorPreference: string | null;
-  ethnicityPreference: string | null;
-  contactMethod: string | null;
-  contactValue: string | null;
+  referralCode: string | null;
   onboardingComplete: boolean;
   createdAt: string;
 };
 
+type MatchPartner = {
+  firstName: string | null;
+  age: number | null;
+  school: string | null;
+  photoUrl: string | null;
+  intentions: string | null;
+  vibe: string | null;
+  interests: string[];
+  idealHangout: string | null;
+  contactMethod?: string | null;
+  contactValue?: string | null;
+};
+
+type MeetingSpot = {
+  name: string;
+  type: string;
+  neighborhood: string;
+  description: string | null;
+};
+
+type MatchData = {
+  hasMatch: boolean;
+  matchId?: string;
+  status?: string;
+  myDecision?: string;
+  isMutual?: boolean;
+  dropDate?: string;
+  partner?: MatchPartner;
+  suggestedSpot?: MeetingSpot | null;
+};
+
+/* ─── Helpers ─── */
 function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
   return "Good evening";
 }
 
-function getNextDropDate(): Date {
+function getNextWednesday(): Date {
   const now = new Date();
-  const nextFriday = new Date(now);
-  nextFriday.setDate(now.getDate() + ((5 - now.getDay() + 7) % 7 || 7));
-  nextFriday.setHours(18, 0, 0, 0);
-  if (nextFriday <= now) {
-    nextFriday.setDate(nextFriday.getDate() + 7);
-  }
-  return nextFriday;
+  const wed = new Date(now);
+  wed.setDate(now.getDate() + ((3 - now.getDay() + 7) % 7 || 7));
+  wed.setHours(18, 0, 0, 0);
+  if (wed <= now) wed.setDate(wed.getDate() + 7);
+  return wed;
 }
 
 function useCountdown(target: Date) {
   const [now, setNow] = useState(() => new Date());
-
   useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(interval);
+    const t = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(t);
   }, []);
-
   const diff = Math.max(0, target.getTime() - now.getTime());
-  const days = Math.floor(diff / 86_400_000);
-  const hours = Math.floor((diff % 86_400_000) / 3_600_000);
-  const minutes = Math.floor((diff % 3_600_000) / 60_000);
+  return {
+    days: Math.floor(diff / 86_400_000),
+    hours: Math.floor((diff % 86_400_000) / 3_600_000),
+    minutes: Math.floor((diff % 3_600_000) / 60_000),
+  };
+}
 
-  return { days, hours, minutes };
+function getLabel(list: { value: string; label: string }[], val: string | null): string {
+  if (!val) return "";
+  return list.find((i) => i.value === val)?.label ?? val;
 }
 
 function CountdownUnit({ value, label }: { value: number; label: string }) {
   return (
     <div className="flex flex-col items-center">
-      <span className="font-display text-3xl sm:text-4xl text-charcoal leading-none">
-        {value}
-      </span>
-      <span className="text-xs text-text-tertiary mt-1.5 uppercase tracking-widest">
-        {label}
-      </span>
+      <span className="font-display text-3xl sm:text-4xl text-charcoal leading-none">{value}</span>
+      <span className="text-xs text-text-tertiary mt-1.5 uppercase tracking-widest">{label}</span>
     </div>
   );
 }
@@ -87,62 +111,51 @@ function PulsingDot() {
   );
 }
 
-function calculateProfileCompletion(user: UserData): number {
-  let pct = 0;
-  if (user.firstName?.trim()) pct += 20;
-  if (user.school?.trim()) pct += 20;
-  if (user.major?.trim()) pct += 20;
-  if (user.age != null) pct += 20;
-  if (user.contactMethod?.trim() && user.contactValue?.trim()) pct += 20;
-  return pct;
-}
-
-function ProgressBar({ value }: { value: number }) {
-  return (
-    <div className="h-1.5 w-full rounded-full bg-cream-dark/30" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
-      <div
-        className="h-full rounded-full bg-sage transition-all duration-700 ease-out"
-        style={{ width: `${value}%` }}
-      />
-    </div>
-  );
-}
-
 /* ─── Waitlist Dashboard ─── */
-function WaitlistDashboard({ user, loading, error }: { user: UserData | null; loading: boolean; error: boolean }) {
+function WaitlistDashboard({ user, loading }: { user: UserData | null; loading: boolean }) {
   const greeting = useMemo(() => getGreeting(), []);
-  const nextDrop = useMemo(() => getNextDropDate(), []);
-  const countdown = useCountdown(nextDrop);
+  const nextWed = useMemo(() => getNextWednesday(), []);
+  const countdown = useCountdown(nextWed);
   const displayName = user?.firstName?.trim() || "friend";
-  const profileCompletion = user ? calculateProfileCompletion(user) : 0;
+  const referralLink = user?.referralCode
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/onboarding?ref=${user.referralCode}`
+    : null;
+
+  const wedLabel = nextWed.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   return (
     <div className="section-container py-12 sm:py-16">
       {/* Header */}
-      <section className="mb-12 text-center sm:text-left">
+      <section className="mb-10 text-center sm:text-left">
         <div className="flex items-center justify-center sm:justify-start gap-2.5 mb-3">
           <PulsingDot />
-          <span className="text-xs font-medium text-sage uppercase tracking-widest">Active</span>
+          <span className="text-xs font-medium text-sage uppercase tracking-widest">You&rsquo;re in</span>
         </div>
         <h1 className="font-display text-2xl sm:text-3xl text-charcoal">
-          {loading ? (
-            <Skeleton variant="heading" className="h-9 max-w-xs sm:h-10 mx-auto sm:mx-0" />
-          ) : error ? (
-            "You're in, Daisy"
-          ) : (
-            <>{greeting}, {displayName}</>
-          )}
+          {loading ? <Skeleton variant="heading" className="h-9 max-w-xs sm:h-10 mx-auto sm:mx-0" /> : <>{greeting}, {displayName}</>}
         </h1>
-        <p className="mt-1.5 text-text-secondary">
-          We&rsquo;re preparing your first match. Sit tight.
+        <p className="mt-1.5 text-text-secondary max-w-md">
+          We&rsquo;ll text you as soon as your match is ready. Matches drop weekly on Wednesdays.
         </p>
       </section>
 
-      {/* Countdown card */}
+      {/* News banner */}
+      <div className="rounded-xl border border-sage-light/30 bg-sage-pale/20 px-5 py-4 mb-6 flex items-start gap-3">
+        <Bell className="w-4.5 h-4.5 text-sage mt-0.5 shrink-0" strokeWidth={1.8} />
+        <div>
+          <p className="text-sm font-medium text-charcoal">First matches release Wednesday, April 8</p>
+          <p className="text-xs text-text-secondary mt-0.5">You&rsquo;ll get a text when yours is ready.</p>
+        </div>
+      </div>
+
+      {/* Countdown */}
       <Card className="mb-6 text-center py-10 sm:py-12 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-sage-pale/20 via-transparent to-butter-pale/15" aria-hidden="true" />
         <div className="relative z-10">
-          <p className="text-sm font-medium text-text-secondary mb-6">Next matches drop in</p>
+          <div className="flex items-center justify-center gap-2 mb-5">
+            <Calendar className="w-4 h-4 text-text-tertiary" strokeWidth={1.6} />
+            <p className="text-sm font-medium text-text-secondary">Next drop: {wedLabel}</p>
+          </div>
           <div className="flex items-center justify-center gap-6 sm:gap-10">
             <CountdownUnit value={countdown.days} label="days" />
             <span className="text-2xl text-border-light font-light -mt-4">:</span>
@@ -150,15 +163,11 @@ function WaitlistDashboard({ user, loading, error }: { user: UserData | null; lo
             <span className="text-2xl text-border-light font-light -mt-4">:</span>
             <CountdownUnit value={countdown.minutes} label="min" />
           </div>
-          <p className="mt-6 text-sm text-text-tertiary">
-            Every Friday at 6 PM
-          </p>
         </div>
       </Card>
 
-      {/* Status + Invite row */}
+      {/* Status + Invite */}
       <div className="grid gap-6 md:grid-cols-2 mb-10">
-        {/* Status */}
         <Card className="flex items-start gap-4">
           <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-sage-pale/60 border border-sage-light/30">
             <Sparkles className="w-5 h-5 text-sage" strokeWidth={1.6} />
@@ -171,7 +180,6 @@ function WaitlistDashboard({ user, loading, error }: { user: UserData | null; lo
           </div>
         </Card>
 
-        {/* Invite friends */}
         <Card className="flex items-start gap-4">
           <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-butter-pale/70 border border-butter-light/40">
             <Users className="w-5 h-5 text-espresso" strokeWidth={1.6} />
@@ -181,36 +189,19 @@ function WaitlistDashboard({ user, loading, error }: { user: UserData | null; lo
             <p className="text-sm text-text-secondary leading-relaxed mb-3">
               Invite friends from your school. More people means better, faster matches.
             </p>
-            <Button variant="secondary" size="sm">
-              <Send className="w-3.5 h-3.5" />
-              Invite 2 friends
-            </Button>
+            {referralLink && (
+              <button
+                type="button"
+                onClick={() => navigator.clipboard.writeText(referralLink)}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-sage hover:text-olive transition-colors"
+              >
+                <Send className="w-3.5 h-3.5" />
+                Copy invite link
+              </button>
+            )}
           </div>
         </Card>
       </div>
-
-      {/* Profile completion */}
-      {!loading && !error && user && profileCompletion < 100 && (
-        <Card className="mb-10">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h2 className="font-display text-lg text-charcoal">Your profile</h2>
-              <p className="mt-0.5 text-sm text-text-secondary">
-                {profileCompletion}% complete — a complete profile gets better matches
-              </p>
-            </div>
-            <span className="text-2xl font-display text-sage">
-              {profileCompletion}%
-            </span>
-          </div>
-          <ProgressBar value={profileCompletion} />
-          <div className="mt-4">
-            <Button variant="link" href="/profile">
-              Complete your profile &rarr;
-            </Button>
-          </div>
-        </Card>
-      )}
 
       {/* Quick actions */}
       <section className="mb-12">
@@ -229,7 +220,6 @@ function WaitlistDashboard({ user, loading, error }: { user: UserData | null; lo
               </div>
             </Link>
           </Card>
-
           <Card hover variant="outlined" className="group">
             <Link href="/preferences" className="block">
               <div className="flex items-center gap-3">
@@ -243,7 +233,6 @@ function WaitlistDashboard({ user, loading, error }: { user: UserData | null; lo
               </div>
             </Link>
           </Card>
-
           <Card hover variant="outlined" className="group">
             <Link href="/profile#contact" className="block">
               <div className="flex items-center gap-3">
@@ -260,41 +249,202 @@ function WaitlistDashboard({ user, loading, error }: { user: UserData | null; lo
         </div>
       </section>
 
-      {/* Account */}
-      <section>
-        <h2 className="font-display text-lg text-charcoal mb-5">Account</h2>
-        <Card variant="outlined">
-          <div className="flex flex-col gap-5">
-            <div>
-              <p className="text-sm text-text-tertiary">Email</p>
-              {loading ? (
-                <Skeleton className="mt-1 h-5 max-w-xs" />
-              ) : error || !user ? (
-                <p className="text-text-primary">&mdash;</p>
-              ) : (
-                <p className="text-text-primary">{user.email}</p>
-              )}
-            </div>
+      <AccountSection user={user} loading={loading} />
+    </div>
+  );
+}
 
-            <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border-light">
-              <Button variant="ghost" size="sm" type="button" onClick={() => signOut({ callbackUrl: "/" })}>
-                Sign out
-              </Button>
-            </div>
+/* ─── Match Dashboard ─── */
+function MatchDashboard({
+  match,
+  onDecision,
+  deciding,
+}: {
+  match: MatchData;
+  onDecision: (d: "INTERESTED" | "DECLINED") => void;
+  deciding: boolean;
+}) {
+  const partner = match.partner!;
+  const tags = [
+    partner.intentions && getLabel(INTENTIONS, partner.intentions),
+    partner.vibe && getLabel(VIBES, partner.vibe),
+    partner.idealHangout && getLabel(IDEAL_HANGOUTS, partner.idealHangout),
+  ].filter(Boolean);
 
-            <button
-              type="button"
-              className={cn(
-                "self-start text-sm text-error hover:underline underline-offset-4",
-                "transition-colors duration-150 hover:text-error/80"
-              )}
+  const alreadyDecided = match.myDecision === "INTERESTED";
+
+  return (
+    <div className="section-container py-12 sm:py-16">
+      <section className="mb-8 text-center">
+        <p className="text-sm font-medium text-sage uppercase tracking-widest mb-2">Your match is here</p>
+        <h1 className="font-display text-2xl sm:text-3xl text-charcoal">
+          Someone picked for you
+        </h1>
+      </section>
+
+      {/* Match card */}
+      <Card className="max-w-sm mx-auto mb-8 overflow-hidden">
+        {partner.photoUrl ? (
+          <div className="w-full aspect-[4/5] bg-cream overflow-hidden rounded-t-xl -mt-6 -mx-6 sm:-mt-7 sm:-mx-7 mb-5" style={{ width: "calc(100% + 3rem)" }}>
+            <img src={partner.photoUrl} alt={partner.firstName ?? "Match"} className="w-full h-full object-cover" />
+          </div>
+        ) : (
+          <div className="w-full aspect-square bg-cream flex items-center justify-center rounded-t-xl -mt-6 -mx-6 sm:-mt-7 sm:-mx-7 mb-5" style={{ width: "calc(100% + 3rem)" }}>
+            <User className="w-16 h-16 text-text-tertiary/30" />
+          </div>
+        )}
+
+        <h2 className="font-display text-2xl text-charcoal">
+          {partner.firstName}{partner.age ? `, ${partner.age}` : ""}
+        </h2>
+        {partner.school && (
+          <p className="text-sm text-text-secondary mt-0.5">{partner.school}</p>
+        )}
+
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-4">
+            {tags.map((tag) => (
+              <span key={tag} className="text-xs bg-sage-pale/50 text-sage border border-sage-light/30 rounded-full px-3 py-1 font-medium">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {!alreadyDecided ? (
+          <div className="flex gap-3 mt-6">
+            <Button
+              variant="ghost"
+              size="lg"
+              onClick={() => onDecision("DECLINED")}
+              disabled={deciding}
+              className="flex-1"
             >
-              Delete account
-            </button>
+              <X className="w-4 h-4" />
+              Not for me
+            </Button>
+            <Button
+              size="lg"
+              onClick={() => onDecision("INTERESTED")}
+              disabled={deciding}
+              className="flex-1"
+            >
+              <Heart className="w-4 h-4" />
+              Interested
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-6 rounded-xl bg-sage-pale/30 border border-sage-light/30 px-4 py-3 text-center">
+            <p className="text-sm font-medium text-sage">You said you&rsquo;re interested</p>
+            <p className="text-xs text-text-tertiary mt-1">Waiting to see if they feel the same&hellip;</p>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+/* ─── Mutual Match Dashboard ─── */
+function MutualDashboard({ match }: { match: MatchData }) {
+  const partner = match.partner!;
+  const spot = match.suggestedSpot;
+
+  return (
+    <div className="section-container py-12 sm:py-16">
+      <section className="mb-8 text-center">
+        <p className="text-sm font-medium text-sage uppercase tracking-widest mb-2">It&rsquo;s mutual</p>
+        <h1 className="font-display text-2xl sm:text-3xl text-charcoal">
+          You matched with {partner.firstName}
+        </h1>
+        <p className="text-text-secondary mt-1.5">You both said yes. Here&rsquo;s how to connect.</p>
+      </section>
+
+      {/* Partner card with contact revealed */}
+      <Card className="max-w-sm mx-auto mb-6">
+        <div className="flex items-center gap-4 mb-4">
+          {partner.photoUrl ? (
+            <img src={partner.photoUrl} alt={partner.firstName ?? ""} className="w-16 h-16 rounded-full object-cover" />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-cream flex items-center justify-center">
+              <User className="w-8 h-8 text-text-tertiary/30" />
+            </div>
+          )}
+          <div>
+            <h2 className="font-display text-xl text-charcoal">
+              {partner.firstName}{partner.age ? `, ${partner.age}` : ""}
+            </h2>
+            {partner.school && <p className="text-sm text-text-secondary">{partner.school}</p>}
+          </div>
+        </div>
+
+        {partner.contactMethod && partner.contactValue && (
+          <div className="rounded-xl bg-sage-pale/30 border border-sage-light/30 px-4 py-3 mb-4">
+            <p className="text-xs text-text-tertiary uppercase tracking-wider mb-1">Reach out via {partner.contactMethod}</p>
+            <p className="text-base font-medium text-charcoal">{partner.contactValue}</p>
+          </div>
+        )}
+      </Card>
+
+      {/* Meeting spot suggestion */}
+      {spot && (
+        <Card className="max-w-sm mx-auto mb-8">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-xl bg-butter-pale/70 border border-butter-light/40">
+              <MapPin className="w-4.5 h-4.5 text-espresso" strokeWidth={1.8} />
+            </div>
+            <div>
+              <p className="text-xs text-text-tertiary uppercase tracking-wider mb-1">Suggested first spot</p>
+              <h3 className="font-display text-lg text-charcoal">{spot.name}</h3>
+              <p className="text-sm text-text-secondary">{spot.neighborhood}</p>
+              {spot.description && (
+                <p className="text-sm text-text-tertiary mt-1 leading-relaxed">{spot.description}</p>
+              )}
+            </div>
           </div>
         </Card>
-      </section>
+      )}
+
+      <div className="max-w-sm mx-auto text-center">
+        <p className="text-sm text-text-tertiary">
+          Take it from here. Be kind, be yourself, and have fun.
+        </p>
+      </div>
     </div>
+  );
+}
+
+/* ─── Account Section ─── */
+function AccountSection({ user, loading }: { user: UserData | null; loading: boolean }) {
+  return (
+    <section>
+      <h2 className="font-display text-lg text-charcoal mb-5">Account</h2>
+      <Card variant="outlined">
+        <div className="flex flex-col gap-5">
+          <div>
+            <p className="text-sm text-text-tertiary">Email</p>
+            {loading || !user ? (
+              <Skeleton className="mt-1 h-5 max-w-xs" />
+            ) : (
+              <p className="text-text-primary">{user.email}</p>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border-light">
+            <Button variant="ghost" size="sm" type="button" onClick={() => signOut({ callbackUrl: "/" })}>
+              Sign out
+            </Button>
+          </div>
+          <button
+            type="button"
+            className={cn(
+              "self-start text-sm text-error hover:underline underline-offset-4",
+              "transition-colors duration-150 hover:text-error/80",
+            )}
+          >
+            Delete account
+          </button>
+        </div>
+      </Card>
+    </section>
   );
 }
 
@@ -302,56 +452,87 @@ function WaitlistDashboard({ user, loading, error }: { user: UserData | null; lo
 export default function DashboardPage() {
   const { status } = useSession();
   const [user, setUser] = useState<UserData | null>(null);
-  const [userLoading, setUserLoading] = useState(true);
-  const [userError, setUserError] = useState(false);
+  const [match, setMatch] = useState<MatchData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [deciding, setDeciding] = useState(false);
 
   useEffect(() => {
     if (status !== "authenticated") {
-      if (status === "unauthenticated") setUserLoading(false);
+      if (status === "unauthenticated") setLoading(false);
       return;
     }
 
     let cancelled = false;
-    setUserLoading(true);
-    setUserError(false);
 
-    fetch("/api/user")
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Failed to load user");
-        return res.json() as Promise<UserData>;
+    Promise.all([
+      fetch("/api/user").then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/match").then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([userData, matchData]) => {
+        if (cancelled) return;
+        setUser(userData);
+        setMatch(matchData);
       })
-      .then((data) => {
-        if (!cancelled) setUser(data);
-      })
-      .catch(() => {
-        if (!cancelled) setUserError(true);
-      })
+      .catch(() => {})
       .finally(() => {
-        if (!cancelled) setUserLoading(false);
+        if (!cancelled) setLoading(false);
       });
 
     return () => { cancelled = true; };
   }, [status]);
 
-  const isLoading = status === "loading" || userLoading;
+  const handleDecision = useCallback(
+    async (decision: "INTERESTED" | "DECLINED") => {
+      if (!match?.matchId) return;
+      setDeciding(true);
 
-  // TODO: when matching is implemented, check user.hasMatch or similar
-  const hasMatch = false;
+      try {
+        const res = await fetch("/api/match/decision", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ matchId: match.matchId, decision }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        // Refresh match state
+        const refreshed = await fetch("/api/match").then((r) => r.json());
+        setMatch(refreshed);
+      } catch {
+        // Silently handle for now
+      } finally {
+        setDeciding(false);
+      }
+    },
+    [match],
+  );
+
+  const isLoading = status === "loading" || loading;
+
+  // Determine dashboard state
+  const hasMatch = match?.hasMatch === true;
+  const isMutual = match?.isMutual === true;
+  const isDeclined = match?.status === "DECLINED";
 
   return (
     <div className="flex min-h-dvh flex-col bg-ivory bg-grain">
       <Navbar />
-
       <main className="flex-1">
-        {hasMatch ? (
-          <div className="section-container py-16 text-center">
-            <p>Matched dashboard coming soon</p>
+        {isLoading ? (
+          <div className="section-container py-16">
+            <Skeleton variant="heading" className="h-10 max-w-xs mb-4" />
+            <Skeleton className="h-5 max-w-sm mb-8" />
+            <Skeleton className="h-48 w-full rounded-xl" />
           </div>
+        ) : isMutual ? (
+          <MutualDashboard match={match!} />
+        ) : hasMatch && !isDeclined ? (
+          <MatchDashboard match={match!} onDecision={handleDecision} deciding={deciding} />
         ) : (
-          <WaitlistDashboard user={user} loading={isLoading} error={userError} />
+          <WaitlistDashboard user={user} loading={isLoading} />
         )}
       </main>
-
       <Footer />
     </div>
   );
