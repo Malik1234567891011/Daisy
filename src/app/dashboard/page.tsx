@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
+import { Users, Send, Clock, Sparkles, User, Settings, Mail } from "lucide-react";
 
 type UserData = {
   id: string;
@@ -38,6 +39,55 @@ function getGreeting(): string {
   return "Good evening";
 }
 
+function getNextDropDate(): Date {
+  const now = new Date();
+  const nextFriday = new Date(now);
+  nextFriday.setDate(now.getDate() + ((5 - now.getDay() + 7) % 7 || 7));
+  nextFriday.setHours(18, 0, 0, 0);
+  if (nextFriday <= now) {
+    nextFriday.setDate(nextFriday.getDate() + 7);
+  }
+  return nextFriday;
+}
+
+function useCountdown(target: Date) {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const diff = Math.max(0, target.getTime() - now.getTime());
+  const days = Math.floor(diff / 86_400_000);
+  const hours = Math.floor((diff % 86_400_000) / 3_600_000);
+  const minutes = Math.floor((diff % 3_600_000) / 60_000);
+
+  return { days, hours, minutes };
+}
+
+function CountdownUnit({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="flex flex-col items-center">
+      <span className="font-display text-3xl sm:text-4xl text-charcoal leading-none">
+        {value}
+      </span>
+      <span className="text-xs text-text-tertiary mt-1.5 uppercase tracking-widest">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function PulsingDot() {
+  return (
+    <span className="relative flex h-2 w-2">
+      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sage opacity-40" />
+      <span className="relative inline-flex h-2 w-2 rounded-full bg-sage" />
+    </span>
+  );
+}
+
 function calculateProfileCompletion(user: UserData): number {
   let pct = 0;
   if (user.firstName?.trim()) pct += 20;
@@ -59,19 +109,200 @@ function ProgressBar({ value }: { value: number }) {
   );
 }
 
-function PulsingDot() {
+/* ─── Waitlist Dashboard ─── */
+function WaitlistDashboard({ user, loading, error }: { user: UserData | null; loading: boolean; error: boolean }) {
+  const greeting = useMemo(() => getGreeting(), []);
+  const nextDrop = useMemo(() => getNextDropDate(), []);
+  const countdown = useCountdown(nextDrop);
+  const displayName = user?.firstName?.trim() || "friend";
+  const profileCompletion = user ? calculateProfileCompletion(user) : 0;
+
   return (
-    <span className="relative flex h-2.5 w-2.5">
-      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sage opacity-40" />
-      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-sage" />
-    </span>
+    <div className="section-container py-12 sm:py-16">
+      {/* Header */}
+      <section className="mb-12 text-center sm:text-left">
+        <div className="flex items-center justify-center sm:justify-start gap-2.5 mb-3">
+          <PulsingDot />
+          <span className="text-xs font-medium text-sage uppercase tracking-widest">Active</span>
+        </div>
+        <h1 className="font-display text-2xl sm:text-3xl text-charcoal">
+          {loading ? (
+            <Skeleton variant="heading" className="h-9 max-w-xs sm:h-10 mx-auto sm:mx-0" />
+          ) : error ? (
+            "You're in, Daisy"
+          ) : (
+            <>{greeting}, {displayName}</>
+          )}
+        </h1>
+        <p className="mt-1.5 text-text-secondary">
+          We&rsquo;re preparing your first match. Sit tight.
+        </p>
+      </section>
+
+      {/* Countdown card */}
+      <Card className="mb-6 text-center py-10 sm:py-12 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-sage-pale/20 via-transparent to-butter-pale/15" aria-hidden="true" />
+        <div className="relative z-10">
+          <p className="text-sm font-medium text-text-secondary mb-6">Next matches drop in</p>
+          <div className="flex items-center justify-center gap-6 sm:gap-10">
+            <CountdownUnit value={countdown.days} label="days" />
+            <span className="text-2xl text-border-light font-light -mt-4">:</span>
+            <CountdownUnit value={countdown.hours} label="hrs" />
+            <span className="text-2xl text-border-light font-light -mt-4">:</span>
+            <CountdownUnit value={countdown.minutes} label="min" />
+          </div>
+          <p className="mt-6 text-sm text-text-tertiary">
+            Every Friday at 6 PM
+          </p>
+        </div>
+      </Card>
+
+      {/* Status + Invite row */}
+      <div className="grid gap-6 md:grid-cols-2 mb-10">
+        {/* Status */}
+        <Card className="flex items-start gap-4">
+          <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-sage-pale/60 border border-sage-light/30">
+            <Sparkles className="w-5 h-5 text-sage" strokeWidth={1.6} />
+          </div>
+          <div>
+            <h2 className="font-display text-lg text-charcoal mb-1">You&rsquo;re in the first wave</h2>
+            <p className="text-sm text-text-secondary leading-relaxed">
+              Early sign-ups get matched first. Your profile is in queue and looking great.
+            </p>
+          </div>
+        </Card>
+
+        {/* Invite friends */}
+        <Card className="flex items-start gap-4">
+          <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-butter-pale/70 border border-butter-light/40">
+            <Users className="w-5 h-5 text-espresso" strokeWidth={1.6} />
+          </div>
+          <div>
+            <h2 className="font-display text-lg text-charcoal mb-1">Want your match faster?</h2>
+            <p className="text-sm text-text-secondary leading-relaxed mb-3">
+              Invite friends from your school. More people means better, faster matches.
+            </p>
+            <Button variant="secondary" size="sm">
+              <Send className="w-3.5 h-3.5" />
+              Invite 2 friends
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      {/* Profile completion */}
+      {!loading && !error && user && profileCompletion < 100 && (
+        <Card className="mb-10">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h2 className="font-display text-lg text-charcoal">Your profile</h2>
+              <p className="mt-0.5 text-sm text-text-secondary">
+                {profileCompletion}% complete — a complete profile gets better matches
+              </p>
+            </div>
+            <span className="text-2xl font-display text-sage">
+              {profileCompletion}%
+            </span>
+          </div>
+          <ProgressBar value={profileCompletion} />
+          <div className="mt-4">
+            <Button variant="link" href="/profile">
+              Complete your profile &rarr;
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Quick actions */}
+      <section className="mb-12">
+        <h2 className="font-display text-lg text-charcoal mb-5">While you wait</h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card hover variant="outlined" className="group">
+            <Link href="/profile" className="block">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-sage-pale/60 text-sage border border-sage-light/30">
+                  <User className="w-[18px] h-[18px]" strokeWidth={1.8} />
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-charcoal group-hover:text-olive transition-colors">Edit profile</p>
+                  <p className="text-xs text-text-tertiary">Update your info</p>
+                </div>
+              </div>
+            </Link>
+          </Card>
+
+          <Card hover variant="outlined" className="group">
+            <Link href="/preferences" className="block">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-butter-pale/70 text-espresso border border-butter-light/40">
+                  <Settings className="w-[18px] h-[18px]" strokeWidth={1.8} />
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-charcoal group-hover:text-olive transition-colors">Preferences</p>
+                  <p className="text-xs text-text-tertiary">Refine your criteria</p>
+                </div>
+              </div>
+            </Link>
+          </Card>
+
+          <Card hover variant="outlined" className="group">
+            <Link href="/profile#contact" className="block">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-cream/70 text-espresso border border-border-light/50">
+                  <Mail className="w-[18px] h-[18px]" strokeWidth={1.8} />
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-charcoal group-hover:text-olive transition-colors">Contact info</p>
+                  <p className="text-xs text-text-tertiary">How your match reaches you</p>
+                </div>
+              </div>
+            </Link>
+          </Card>
+        </div>
+      </section>
+
+      {/* Account */}
+      <section>
+        <h2 className="font-display text-lg text-charcoal mb-5">Account</h2>
+        <Card variant="outlined">
+          <div className="flex flex-col gap-5">
+            <div>
+              <p className="text-sm text-text-tertiary">Email</p>
+              {loading ? (
+                <Skeleton className="mt-1 h-5 max-w-xs" />
+              ) : error || !user ? (
+                <p className="text-text-primary">&mdash;</p>
+              ) : (
+                <p className="text-text-primary">{user.email}</p>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border-light">
+              <Button variant="ghost" size="sm" type="button" onClick={() => signOut({ callbackUrl: "/" })}>
+                Sign out
+              </Button>
+            </div>
+
+            <button
+              type="button"
+              className={cn(
+                "self-start text-sm text-error hover:underline underline-offset-4",
+                "transition-colors duration-150 hover:text-error/80"
+              )}
+            >
+              Delete account
+            </button>
+          </div>
+        </Card>
+      </section>
+    </div>
   );
 }
 
+/* ─── Main Page ─── */
 export default function DashboardPage() {
   const router = useRouter();
   const { status } = useSession();
-  const greeting = useMemo(() => getGreeting(), []);
   const [user, setUser] = useState<UserData | null>(null);
   const [userLoading, setUserLoading] = useState(false);
   const [userError, setUserError] = useState(false);
@@ -95,9 +326,7 @@ export default function DashboardPage() {
           router.replace("/login");
           return null;
         }
-        if (!res.ok) {
-          throw new Error("Failed to load user");
-        }
+        if (!res.ok) throw new Error("Failed to load user");
         return res.json() as Promise<UserData>;
       })
       .then((data) => {
@@ -111,199 +340,30 @@ export default function DashboardPage() {
         if (!cancelled) setUserLoading(false);
       });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [status, router]);
 
-  const sessionOrUserLoading = status === "loading" || (status === "authenticated" && userLoading);
-  const profileCompletion = user ? calculateProfileCompletion(user) : 0;
-  const displayName = user?.firstName?.trim() || "friend";
+  if (status === "unauthenticated") return null;
 
-  if (status === "unauthenticated") {
-    return null;
-  }
+  const isLoading = status === "loading" || (status === "authenticated" && userLoading);
+
+  // TODO: when matching is implemented, check user.hasMatch or similar
+  // and render <MatchedDashboard /> instead
+  const hasMatch = false;
 
   return (
     <div className="flex min-h-dvh flex-col bg-ivory bg-grain">
       <Navbar />
 
       <main className="flex-1">
-        <div className="section-container py-12 sm:py-16">
-          {/* Welcome */}
-          <section className="mb-12">
-            <h1 className="font-display text-2xl sm:text-3xl text-charcoal">
-              {sessionOrUserLoading ? (
-                <Skeleton variant="heading" className="h-9 max-w-xs sm:h-10" />
-              ) : userError ? (
-                "Welcome back"
-              ) : (
-                <>Welcome back, {displayName}</>
-              )}
-            </h1>
-            <p className="mt-1 text-text-secondary">
-              {greeting} — here&rsquo;s where things stand.
-            </p>
-          </section>
-
-          {/* Primary cards grid */}
-          <div className="grid gap-6 md:grid-cols-2 mb-10">
-            {/* Profile completion */}
-            <Card>
-              {sessionOrUserLoading ? (
-                <>
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="min-w-0 flex-1 space-y-2 pr-4">
-                      <Skeleton className="h-6 w-36" />
-                      <Skeleton className="h-4 w-48" />
-                    </div>
-                    <Skeleton className="h-8 w-14 shrink-0" />
-                  </div>
-                  <Skeleton className="h-2 w-full rounded-full" />
-                  <div className="mt-4">
-                    <Skeleton className="h-4 w-44" />
-                  </div>
-                </>
-              ) : userError || !user ? (
-                <p className="text-sm text-text-secondary">We couldn&rsquo;t load your profile. Try refreshing the page.</p>
-              ) : (
-                <>
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h2 className="font-display text-lg text-charcoal">Your profile</h2>
-                      <p className="mt-0.5 text-sm text-text-secondary">
-                        Profile {profileCompletion}% complete
-                      </p>
-                    </div>
-                    <span className="text-2xl font-display text-sage">
-                      {profileCompletion}%
-                    </span>
-                  </div>
-                  <ProgressBar value={profileCompletion} />
-                  {profileCompletion < 100 && (
-                    <div className="mt-4">
-                      <Button variant="link" href="/profile">
-                        Complete your profile &rarr;
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-            </Card>
-
-            {/* Match status */}
-            <Card>
-              <div className="flex items-start justify-between mb-3">
-                <h2 className="font-display text-lg text-charcoal">Your match</h2>
-                <Badge variant="sage">
-                  <span className="flex items-center gap-1.5">
-                    <PulsingDot />
-                    Active
-                  </span>
-                </Badge>
-              </div>
-              <p className="text-text-secondary leading-relaxed">
-                We&rsquo;re reviewing profiles and looking for someone great for you.
-                Sit tight — good things are on the way.
-              </p>
-              <p className="mt-3 text-sm text-text-tertiary">
-                This usually takes 1–7 days
-              </p>
-            </Card>
+        {hasMatch ? (
+          // Future: matched dashboard with match details
+          <div className="section-container py-16 text-center">
+            <p>Matched dashboard coming soon</p>
           </div>
-
-          {/* Quick actions */}
-          <section className="mb-12">
-            <h2 className="font-display text-lg text-charcoal mb-5">Quick actions</h2>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Card hover variant="outlined" className="group">
-                <Link href="/profile" className="block">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-sage-pale/60 text-sage border border-sage-light/30">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
-                      </svg>
-                    </span>
-                    <div>
-                      <p className="text-sm font-medium text-charcoal group-hover:text-olive transition-colors">Edit profile</p>
-                      <p className="text-xs text-text-tertiary">Update your info</p>
-                    </div>
-                  </div>
-                </Link>
-              </Card>
-
-              <Card hover variant="outlined" className="group">
-                <Link href="/preferences" className="block">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-butter-pale/70 text-espresso border border-butter-light/40">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="12" r="3" />
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                      </svg>
-                    </span>
-                    <div>
-                      <p className="text-sm font-medium text-charcoal group-hover:text-olive transition-colors">Update preferences</p>
-                      <p className="text-xs text-text-tertiary">Refine your match criteria</p>
-                    </div>
-                  </div>
-                </Link>
-              </Card>
-
-              <Card hover variant="outlined" className="group">
-                <Link href="/profile#contact" className="block">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-cream/70 text-espresso border border-border-light/50">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                        <polyline points="22,6 12,13 2,6" />
-                      </svg>
-                    </span>
-                    <div>
-                      <p className="text-sm font-medium text-charcoal group-hover:text-olive transition-colors">Contact settings</p>
-                      <p className="text-xs text-text-tertiary">How your match reaches you</p>
-                    </div>
-                  </div>
-                </Link>
-              </Card>
-            </div>
-          </section>
-
-          {/* Account section */}
-          <section>
-            <h2 className="font-display text-lg text-charcoal mb-5">Account</h2>
-            <Card variant="outlined">
-              <div className="flex flex-col gap-5">
-                <div>
-                  <p className="text-sm text-text-tertiary">Email</p>
-                  {sessionOrUserLoading ? (
-                    <Skeleton className="mt-1 h-5 max-w-xs" />
-                  ) : userError || !user ? (
-                    <p className="text-text-primary">—</p>
-                  ) : (
-                    <p className="text-text-primary">{user.email}</p>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border-light">
-                  <Button variant="ghost" size="sm" type="button" onClick={() => signOut({ callbackUrl: "/" })}>
-                    Sign out
-                  </Button>
-                </div>
-
-                <button
-                  type="button"
-                  className={cn(
-                    "self-start text-sm text-error hover:underline underline-offset-4",
-                    "transition-colors duration-150 hover:text-error/80"
-                  )}
-                >
-                  Delete account
-                </button>
-              </div>
-            </Card>
-          </section>
-        </div>
+        ) : (
+          <WaitlistDashboard user={user} loading={isLoading} error={userError} />
+        )}
       </main>
 
       <Footer />

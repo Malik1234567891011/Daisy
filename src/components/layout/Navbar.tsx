@@ -144,7 +144,7 @@ export default function Navbar() {
         aria-modal="true"
         aria-label="Mobile navigation"
         className={cn(
-          "fixed inset-x-0 top-[68px] bottom-0 z-40 bg-ivory/95 backdrop-blur-xl lg:hidden",
+          "fixed inset-x-0 top-[68px] bottom-0 z-40 bg-ivory lg:hidden",
           "transition-all duration-300 ease-out",
           menuOpen
             ? "opacity-100 visible translate-y-0"
