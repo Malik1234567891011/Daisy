@@ -19,7 +19,12 @@ import StepIdentity from "@/components/onboarding/StepIdentity";
 import StepPreferences from "@/components/onboarding/StepPreferences";
 import StepContact from "@/components/onboarding/StepContact";
 import StepReview from "@/components/onboarding/StepReview";
+import StepPhone from "@/components/onboarding/StepPhone";
+import StepOTP from "@/components/onboarding/StepOTP";
 import StepSuccess from "@/components/onboarding/StepSuccess";
+
+const TOTAL_PROGRESS_STEPS = 9;
+const CINEMATIC_STEP = 10;
 
 const INITIAL_DATA: OnboardingData = {
   email: "",
@@ -46,11 +51,12 @@ const INITIAL_DATA: OnboardingData = {
 export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(INITIAL_DATA);
+  const [phone, setPhone] = useState("");
   const [signupError, setSignupError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const goForward = useCallback(() => {
-    setCurrentStep((s) => Math.min(s + 1, 8));
+    setCurrentStep((s) => Math.min(s + 1, CINEMATIC_STEP));
   }, []);
 
   const goBack = useCallback(() => {
@@ -90,6 +96,7 @@ export default function OnboardingPage() {
     }));
   }, []);
 
+  // Step 7: Review → create account + sign in → advance to phone step
   const handleSignup = useCallback(async () => {
     setSignupError("");
     setIsSubmitting(true);
@@ -131,14 +138,15 @@ export default function OnboardingPage() {
 
       if (signInRes?.error) {
         throw new Error(
-          "Account created but sign-in failed. Please try logging in."
+          "Account created but sign-in failed. Please try logging in.",
         );
       }
 
+      // Advance to phone verification step
       setCurrentStep(8);
     } catch (err) {
       setSignupError(
-        err instanceof Error ? err.message : "Something went wrong."
+        err instanceof Error ? err.message : "Something went wrong.",
       );
     } finally {
       setIsSubmitting(false);
@@ -149,6 +157,9 @@ export default function OnboardingPage() {
     label,
     description,
   }));
+
+  const showHeader = currentStep < CINEMATIC_STEP;
+  const showProgress = currentStep < CINEMATIC_STEP;
 
   function renderStep() {
     switch (currentStep) {
@@ -214,6 +225,23 @@ export default function OnboardingPage() {
           />
         );
       case 8:
+        return (
+          <StepPhone
+            phone={phone}
+            onPhoneChange={setPhone}
+            onCodeSent={goForward}
+            onBack={goBack}
+          />
+        );
+      case 9:
+        return (
+          <StepOTP
+            phone={phone}
+            onVerified={() => setCurrentStep(CINEMATIC_STEP)}
+            onBack={goBack}
+          />
+        );
+      case CINEMATIC_STEP:
         return <StepSuccess />;
       default:
         return null;
@@ -223,20 +251,22 @@ export default function OnboardingPage() {
   return (
     <>
       <div className="min-h-dvh bg-ivory bg-grain">
-        <header className="flex items-center justify-between px-5 py-5 md:px-8 md:py-6">
-          <DaisyLogo size="sm" />
-          {currentStep < 8 && (
-            <Button variant="ghost" size="sm" href="/">
-              Save &amp; exit
-            </Button>
-          )}
-        </header>
+        {showHeader && (
+          <header className="flex items-center justify-between px-5 py-5 md:px-8 md:py-6">
+            <DaisyLogo size="sm" />
+            {currentStep < 8 && (
+              <Button variant="ghost" size="sm" href="/">
+                Save &amp; exit
+              </Button>
+            )}
+          </header>
+        )}
 
-        {currentStep < 8 && (
+        {showProgress && (
           <div className="px-5 pb-8 md:px-8 md:pb-10">
             <ProgressStepper
               currentStep={currentStep}
-              totalSteps={7}
+              totalSteps={TOTAL_PROGRESS_STEPS}
               steps={steps}
             />
           </div>
@@ -246,7 +276,12 @@ export default function OnboardingPage() {
           <div
             key={currentStep}
             className="w-full max-w-lg"
-            style={{ animation: "onboarding-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }}
+            style={{
+              animation:
+                currentStep < CINEMATIC_STEP
+                  ? "onboarding-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1)"
+                  : "none",
+            }}
           >
             {renderStep()}
           </div>

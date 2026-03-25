@@ -3,9 +3,9 @@ import { FAQItem } from "./types";
 export const SITE_NAME = "Daisy";
 
 export const NAV_LINKS = [
-  { label: "How it works", href: "#how-it-works" },
-  { label: "Safety", href: "#safety" },
-  { label: "FAQ", href: "#faq" },
+  { label: "How it works", href: "/#how-it-works" },
+  { label: "Safety", href: "/#safety" },
+  { label: "FAQ", href: "/#faq" },
 ] as const;
 
 export const HERO = {
@@ -274,5 +274,7 @@ export const ONBOARDING_STEPS = [
   { id: 5, label: "Preferences", description: "What you're looking for" },
   { id: 6, label: "Contact", description: "How to reach you" },
   { id: 7, label: "Review", description: "Look it over" },
-  { id: 8, label: "Done", description: "You're in" },
+  { id: 8, label: "Phone", description: "Verify your number" },
+  { id: 9, label: "Verify", description: "Enter code" },
+  { id: 10, label: "Done", description: "You're in" },
 ];

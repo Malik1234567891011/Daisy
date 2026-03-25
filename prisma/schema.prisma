@@ -32,5 +32,9 @@ model User {
   contactMethod String?
   contactValue  String?
 
+  phoneNumber    String?  @unique
+  phoneVerified  Boolean  @default(false)
+  verifiedAt     DateTime?
+
   onboardingComplete Boolean @default(false)
 }
