@@ -15,9 +15,24 @@ interface StepAccountProps {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const BLOCKED_DOMAINS = [
+  "gmail.com", "googlemail.com",
+  "outlook.com", "hotmail.com", "live.com", "msn.com",
+  "yahoo.com", "yahoo.ca", "ymail.com",
+  "icloud.com", "me.com", "mac.com",
+  "aol.com",
+  "protonmail.com", "proton.me", "pm.me",
+  "mail.com", "zoho.com", "gmx.com", "gmx.net",
+  "tutanota.com", "tuta.io",
+  "fastmail.com", "yandex.com",
+];
+
 function getEmailError(value: string): string {
   if (!value.trim()) return "Email is required";
   if (!EMAIL_RE.test(value)) return "Please enter a valid email address";
+  const [local, domain] = value.trim().toLowerCase().split("@");
+  if (local.length < 4) return "That doesn\u2019t look like a school email";
+  if (BLOCKED_DOMAINS.includes(domain)) return "Please use your school email (e.g. you@mail.mcgill.ca)";
   return "";
 }
 

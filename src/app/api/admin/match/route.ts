@@ -30,18 +30,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "One or both users not found" }, { status: 404 });
     }
 
-    // Auto-pick a meeting spot if not provided
     let spotId = suggestedSpotId;
     if (!spotId) {
       const [uA, uB] = await Promise.all([
         prisma.user.findUnique({ where: { id: userAId }, select: { school: true } }),
         prisma.user.findUnique({ where: { id: userBId }, select: { school: true } }),
       ]);
-      const schools = [uA?.school, uB?.school].filter(Boolean) as string[];
-      const spot = await prisma.meetingSpot.findFirst({
-        where: { schools: { hasSome: schools } },
-      });
-      spotId = spot?.id ?? undefined;
+      const schoolA = uA?.school;
+      const schoolB = uB?.school;
+      const schools = [schoolA, schoolB].filter(Boolean) as string[];
+
+      let spots;
+      if (schoolA && schoolB && schoolA === schoolB) {
+        spots = await prisma.meetingSpot.findMany({ where: { schools: { has: schoolA } } });
+      } else if (schools.length === 2) {
+        spots = await prisma.meetingSpot.findMany({ where: { schools: { hasEvery: schools } } });
+        if (spots.length === 0) {
+          spots = await prisma.meetingSpot.findMany({ where: { schools: { hasSome: schools } } });
+        }
+      } else {
+        spots = await prisma.meetingSpot.findMany({ where: { schools: { hasSome: schools } } });
+      }
+
+      if (spots.length > 0) {
+        spotId = spots[Math.floor(Math.random() * spots.length)].id;
+      }
     }
 
     const match = await prisma.match.create({

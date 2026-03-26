@@ -20,6 +20,17 @@ export async function POST(req: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
+    const BLOCKED_DOMAINS = [
+      "gmail.com","googlemail.com","outlook.com","hotmail.com","live.com","msn.com",
+      "yahoo.com","yahoo.ca","ymail.com","icloud.com","me.com","mac.com","aol.com",
+      "protonmail.com","proton.me","pm.me","mail.com","zoho.com","gmx.com","gmx.net",
+      "tutanota.com","tuta.io","fastmail.com","yandex.com",
+    ];
+    const [localPart, domain] = normalizedEmail.split("@");
+    if (!localPart || localPart.length < 4 || !domain || BLOCKED_DOMAINS.includes(domain)) {
+      return NextResponse.json({ error: "Please use a valid school email address" }, { status: 400 });
+    }
+
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
       return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });

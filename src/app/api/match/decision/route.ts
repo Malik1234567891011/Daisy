@@ -44,7 +44,6 @@ export async function POST(req: NextRequest) {
       newStatus = MatchStatus.MUTUAL;
     }
 
-    // If mutual, pick a suggested meeting spot
     let suggestedSpotId = match.suggestedSpotId;
     if (newStatus === "MUTUAL" && !suggestedSpotId) {
       const [userA, userB] = await Promise.all([
@@ -52,15 +51,38 @@ export async function POST(req: NextRequest) {
         prisma.user.findUnique({ where: { id: match.userBId }, select: { school: true } }),
       ]);
 
-      const schools = [userA?.school, userB?.school].filter(Boolean) as string[];
+      const schoolA = userA?.school;
+      const schoolB = userB?.school;
+      const schools = [schoolA, schoolB].filter(Boolean) as string[];
 
-      // Find a spot associated with either school
-      const spot = await prisma.meetingSpot.findFirst({
-        where: { schools: { hasSome: schools } },
-        orderBy: { id: "asc" },
-      });
+      let spots;
 
-      suggestedSpotId = spot?.id ?? null;
+      if (schoolA && schoolB && schoolA === schoolB) {
+        // Same school — pick a random spot for that school
+        spots = await prisma.meetingSpot.findMany({
+          where: { schools: { has: schoolA } },
+        });
+      } else if (schools.length === 2) {
+        // Different schools — try to find a spot that lists both
+        spots = await prisma.meetingSpot.findMany({
+          where: { schools: { hasEvery: schools } },
+        });
+        // Fallback: any spot near either school
+        if (spots.length === 0) {
+          spots = await prisma.meetingSpot.findMany({
+            where: { schools: { hasSome: schools } },
+          });
+        }
+      } else {
+        spots = await prisma.meetingSpot.findMany({
+          where: { schools: { hasSome: schools } },
+        });
+      }
+
+      if (spots.length > 0) {
+        const pick = spots[Math.floor(Math.random() * spots.length)];
+        suggestedSpotId = pick.id;
+      }
     }
 
     const updated = await prisma.match.update({
