@@ -65,8 +65,11 @@ function getGreeting(): string {
   return "Good evening";
 }
 
-function getNextWednesday(): Date {
+const FIRST_DROP = new Date("2026-04-08T18:00:00");
+
+function getNextDropDate(): Date {
   const now = new Date();
+  if (now < FIRST_DROP) return FIRST_DROP;
   const wed = new Date(now);
   wed.setDate(now.getDate() + ((3 - now.getDay() + 7) % 7 || 7));
   wed.setHours(18, 0, 0, 0);
@@ -114,14 +117,15 @@ function PulsingDot() {
 /* ─── Waitlist Dashboard ─── */
 function WaitlistDashboard({ user, loading }: { user: UserData | null; loading: boolean }) {
   const greeting = useMemo(() => getGreeting(), []);
-  const nextWed = useMemo(() => getNextWednesday(), []);
-  const countdown = useCountdown(nextWed);
+  const nextDrop = useMemo(() => getNextDropDate(), []);
+  const countdown = useCountdown(nextDrop);
+  const isFirstDrop = nextDrop.getTime() === FIRST_DROP.getTime();
   const displayName = user?.firstName?.trim() || "friend";
   const referralLink = user?.referralCode
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/onboarding?ref=${user.referralCode}`
     : null;
 
-  const wedLabel = nextWed.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const wedLabel = nextDrop.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   return (
     <div className="section-container py-12 sm:py-16">
@@ -143,8 +147,14 @@ function WaitlistDashboard({ user, loading }: { user: UserData | null; loading: 
       <div className="rounded-xl border border-sage-light/30 bg-sage-pale/20 px-5 py-4 mb-6 flex items-start gap-3">
         <Bell className="w-4.5 h-4.5 text-sage mt-0.5 shrink-0" strokeWidth={1.8} />
         <div>
-          <p className="text-sm font-medium text-charcoal">Next match drop: {wedLabel}</p>
-          <p className="text-xs text-text-secondary mt-0.5">You&rsquo;ll get a text when yours is ready.</p>
+          <p className="text-sm font-medium text-charcoal">
+            {isFirstDrop ? `First matches drop ${wedLabel}` : `Next match drop: ${wedLabel}`}
+          </p>
+          <p className="text-xs text-text-secondary mt-0.5">
+            {isFirstDrop
+              ? "After that, new matches every Wednesday. We\u2019ll text you when yours is ready."
+              : "You\u2019ll get a text when yours is ready."}
+          </p>
         </div>
       </div>
 
@@ -154,7 +164,9 @@ function WaitlistDashboard({ user, loading }: { user: UserData | null; loading: 
         <div className="relative z-10">
           <div className="flex items-center justify-center gap-2 mb-5">
             <Calendar className="w-4 h-4 text-text-tertiary" strokeWidth={1.6} />
-            <p className="text-sm font-medium text-text-secondary">Next drop: {wedLabel}</p>
+            <p className="text-sm font-medium text-text-secondary">
+              {isFirstDrop ? `First drop: ${wedLabel}` : `Next drop: ${wedLabel}`}
+            </p>
           </div>
           <div className="flex items-center justify-center gap-6 sm:gap-10">
             <CountdownUnit value={countdown.days} label="days" />
