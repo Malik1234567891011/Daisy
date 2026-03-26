@@ -1,7 +1,7 @@
 import { ShieldCheck } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { HERO } from "@/lib/constants";
 import Button from "@/components/ui/Button";
+import HeroCountdown from "@/components/landing/HeroCountdown";
 
 function HeroVisual() {
   return (
@@ -96,7 +96,9 @@ export default function Hero() {
               {HERO.subheadline}
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mt-10">
+            <HeroCountdown />
+
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mt-8">
               <Button href="/onboarding" size="lg">
                 {HERO.cta}
               </Button>
