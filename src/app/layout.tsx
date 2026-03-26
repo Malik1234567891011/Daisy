@@ -83,10 +83,7 @@ export default function RootLayout({
                   url: "https://www.daisyweekly.com",
                   description:
                     "Weekly student matchmaking service in Montreal. One thoughtful match every Wednesday.",
-                  sameAs: [
-                    "https://instagram.com/daisyweekly",
-                    "https://tiktok.com/@daisyweekly",
-                  ],
+                  sameAs: ["https://instagram.com/daisyweeklymtl"],
                 },
                 {
                   "@type": "WebSite",

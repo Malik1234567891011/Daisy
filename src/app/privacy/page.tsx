@@ -136,10 +136,10 @@ export default function PrivacyPage() {
                 <p>
                   Questions about this policy or your data? Email us at{" "}
                   <a
-                    href="mailto:hello@joindaisy.com"
+                    href="mailto:malik.shourbaji@gmail.com"
                     className="font-medium text-sage underline-offset-4 hover:underline"
                   >
-                    hello@joindaisy.com
+                    malik.shourbaji@gmail.com
                   </a>
                   . We’re happy to help.
                 </p>

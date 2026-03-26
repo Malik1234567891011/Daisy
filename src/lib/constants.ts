@@ -9,9 +9,9 @@ export const NAV_LINKS = [
 ] as const;
 
 export const HERO = {
-  headline: "Student Dating in Montreal — One Match Every Wednesday",
+  headline: "One match. Every Wednesday.",
   subheadline:
-    "Daisy Weekly matches you with one person every Wednesday — chosen carefully, not at random. No swiping, no algorithms. Just real connections on your campus.",
+    "Student-only matchmaking in Montreal. No swiping. Just real connections.",
   cta: "Get started",
   ctaSecondary: "See how it works",
   trustBar: [
@@ -204,6 +204,7 @@ export const FOOTER = {
       { label: "How it works", href: "/#how-it-works" },
       { label: "Safety", href: "/#safety" },
       { label: "FAQ", href: "/#faq" },
+      { label: "About", href: "/about" },
       { label: "Blog", href: "/blog" },
     ],
     legal: [
@@ -211,9 +212,8 @@ export const FOOTER = {
       { label: "Terms of service", href: "/terms" },
     ],
     connect: [
-      { label: "Instagram", href: "https://instagram.com/daisyweekly" },
-      { label: "TikTok", href: "https://tiktok.com/@daisyweekly" },
-      { label: "Contact us", href: "mailto:hello@daisyweekly.com" },
+      { label: "Instagram", href: "https://instagram.com/daisyweeklymtl" },
+      { label: "Email us", href: "mailto:malik.shourbaji@gmail.com" },
     ],
   },
 };

@@ -88,11 +88,11 @@ export default function Hero() {
               ))}
             </div>
 
-            <h1 className="font-display text-[2.5rem] sm:text-5xl lg:text-[3.5rem] text-charcoal max-w-2xl mx-auto lg:mx-0 text-balance leading-[1.08]">
+            <h1 className="font-display text-[2.75rem] sm:text-5xl lg:text-[3.75rem] text-charcoal max-w-2xl mx-auto lg:mx-0 text-balance leading-[1.05]">
               {HERO.headline}
             </h1>
 
-            <p className="text-base sm:text-lg text-text-secondary max-w-xl mx-auto lg:mx-0 mt-6 leading-relaxed">
+            <p className="text-base sm:text-lg text-text-secondary max-w-xl mx-auto lg:mx-0 mt-5 leading-relaxed">
               {HERO.subheadline}
             </p>
 

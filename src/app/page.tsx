@@ -7,7 +7,6 @@ import WhyDaisy from "@/components/landing/WhyDaisy";
 import TrustSafety from "@/components/landing/TrustSafety";
 import FAQ from "@/components/landing/FAQ";
 import FinalCTA from "@/components/landing/FinalCTA";
-import SEOContent from "@/components/landing/SEOContent";
 import IntroAnimation from "@/components/landing/IntroAnimation";
 import { FAQ_ITEMS } from "@/lib/constants";
 
@@ -43,7 +42,6 @@ export default function Home() {
           <WhyDaisy />
           <TrustSafety />
           <FAQ />
-          <SEOContent />
           <FinalCTA />
         </main>
         <Footer />

@@ -148,10 +148,10 @@ export default function TermsPage() {
                 <p>
                   For questions about these terms, reach us at{" "}
                   <a
-                    href="mailto:hello@joindaisy.com"
+                    href="mailto:malik.shourbaji@gmail.com"
                     className="font-medium text-sage underline-offset-4 hover:underline"
                   >
-                    hello@joindaisy.com
+                    malik.shourbaji@gmail.com
                   </a>
                   .
                 </p>
