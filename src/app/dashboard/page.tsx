@@ -22,6 +22,7 @@ type UserData = {
   firstName: string | null;
   school: string | null;
   referralCode: string | null;
+  referralCount: number;
   onboardingComplete: boolean;
   createdAt: string;
 };
@@ -202,14 +203,19 @@ function WaitlistDashboard({ user, loading }: { user: UserData | null; loading: 
               Invite friends from your school. More people means better, faster matches.
             </p>
             {referralLink && (
-              <button
-                type="button"
-                onClick={() => navigator.clipboard.writeText(referralLink)}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-sage hover:text-olive transition-colors"
-              >
-                <Send className="w-3.5 h-3.5" />
-                Copy invite link
-              </button>
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(referralLink)}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-sage hover:text-olive transition-colors"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  Copy invite link
+                </button>
+                <span className="text-xs text-text-tertiary">
+                  {user?.referralCount ?? 0} referral{user?.referralCount === 1 ? "" : "s"}
+                </span>
+              </div>
             )}
           </div>
         </Card>

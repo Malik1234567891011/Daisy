@@ -46,5 +46,9 @@ export async function GET() {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  return NextResponse.json(user);
+  const referralCount = user.referralCode
+    ? await prisma.user.count({ where: { referredBy: user.referralCode } })
+    : 0;
+
+  return NextResponse.json({ ...user, referralCount });
 }
