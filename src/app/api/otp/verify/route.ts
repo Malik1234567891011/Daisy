@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
         phoneNumber: normalized,
         phoneVerified: true,
         verifiedAt: new Date(),
+        onboardingComplete: true,
       },
     });
 

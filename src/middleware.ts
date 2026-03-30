@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-const PROTECTED = ["/dashboard", "/profile", "/preferences"];
+const PROTECTED = ["/dashboard", "/profile", "/preferences", "/verify-phone"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -31,5 +31,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/profile/:path*", "/preferences/:path*"],
+  matcher: ["/dashboard/:path*", "/profile/:path*", "/preferences/:path*", "/verify-phone/:path*"],
 };

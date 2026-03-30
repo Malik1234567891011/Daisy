@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
         referralCode,
         referredBy: referralSource || null,
         smsConsent: true,
-        onboardingComplete: true,
+        onboardingComplete: false,
       },
     });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import Navbar from "@/components/layout/Navbar";
@@ -23,6 +24,7 @@ type UserData = {
   school: string | null;
   referralCode: string | null;
   referralCount: number;
+  phoneVerified: boolean;
   onboardingComplete: boolean;
   createdAt: string;
 };
@@ -485,6 +487,7 @@ function AccountSection({ user, loading }: { user: UserData | null; loading: boo
 /* ─── Main Page ─── */
 export default function DashboardPage() {
   const { status } = useSession();
+  const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
   const [match, setMatch] = useState<MatchData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -504,6 +507,10 @@ export default function DashboardPage() {
     ])
       .then(([userData, matchData]) => {
         if (cancelled) return;
+        if (userData && !userData.phoneVerified) {
+          router.replace("/verify-phone");
+          return;
+        }
         setUser(userData);
         setMatch(matchData);
       })
@@ -513,7 +520,7 @@ export default function DashboardPage() {
       });
 
     return () => { cancelled = true; };
-  }, [status]);
+  }, [status, router]);
 
   const handleDecision = useCallback(
     async (decision: "INTERESTED" | "DECLINED") => {
