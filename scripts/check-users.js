@@ -1,5 +1,17 @@
 #!/usr/bin/env node
 
+const { resolve } = require("path");
+const { readFileSync, existsSync } = require("fs");
+
+for (const f of [".env", ".env.local"]) {
+  const p = resolve(__dirname, "..", f);
+  if (!existsSync(p)) continue;
+  for (const line of readFileSync(p, "utf8").split("\n")) {
+    const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)=["']?(.+?)["']?\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+  }
+}
+
 const { PrismaClient } = require("@prisma/client");
 
 const p = new PrismaClient();

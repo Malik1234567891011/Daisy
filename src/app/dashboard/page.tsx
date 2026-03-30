@@ -125,6 +125,13 @@ function WaitlistDashboard({ user, loading }: { user: UserData | null; loading: 
   const referralLink = user?.referralCode
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/onboarding?ref=${user.referralCode}`
     : null;
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback(() => {
+    if (!referralLink) return;
+    navigator.clipboard.writeText(referralLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [referralLink]);
 
   const wedLabel = nextDrop.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
@@ -206,11 +213,20 @@ function WaitlistDashboard({ user, loading }: { user: UserData | null; loading: 
               <div className="flex items-center gap-4">
                 <button
                   type="button"
-                  onClick={() => navigator.clipboard.writeText(referralLink)}
+                  onClick={handleCopy}
                   className="inline-flex items-center gap-1.5 text-sm font-medium text-sage hover:text-olive transition-colors"
                 >
-                  <Send className="w-3.5 h-3.5" />
-                  Copy invite link
+                  {copied ? (
+                    <>
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      Copy invite link
+                    </>
+                  )}
                 </button>
                 <span className="text-xs text-text-tertiary">
                   {user?.referralCount ?? 0} referral{user?.referralCount === 1 ? "" : "s"}

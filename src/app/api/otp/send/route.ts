@@ -11,24 +11,6 @@ const VERIFY_SID = process.env.TWILIO_VERIFY_SERVICE_SID!;
 
 const E164_RE = /^\+[1-9]\d{6,14}$/;
 
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const MAX_SENDS = 3;
-const WINDOW_MS = 60 * 60 * 1000; // 1 hour
-
-function isRateLimited(phone: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(phone);
-
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(phone, { count: 1, resetAt: now + WINDOW_MS });
-    return false;
-  }
-
-  if (entry.count >= MAX_SENDS) return true;
-
-  entry.count++;
-  return false;
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -65,13 +47,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "This phone number is already linked to another account" },
         { status: 409 },
-      );
-    }
-
-    if (isRateLimited(normalized)) {
-      return NextResponse.json(
-        { error: "Too many requests. Try again in an hour." },
-        { status: 429 },
       );
     }
 

@@ -47,7 +47,7 @@ export async function GET() {
   }
 
   const referralCount = user.referralCode
-    ? await prisma.user.count({ where: { referredBy: user.referralCode } })
+    ? await prisma.user.count({ where: { referredBy: user.referralCode, phoneVerified: true } })
     : 0;
 
   return NextResponse.json({ ...user, referralCount });
