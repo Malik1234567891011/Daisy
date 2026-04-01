@@ -1,10 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { put } from "@vercel/blob";
+import { del, put } from "@vercel/blob";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 const MAX_SIZE = 3 * 1024 * 1024; // 3 MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+/** Only delete blobs we uploaded: Vercel store + path photos/{userId}-timestamp.ext */
+function isOurPreviousProfilePhoto(url: string, userId: string): boolean {
+  try {
+    const { hostname, pathname } = new URL(url);
+    if (!hostname.endsWith(".public.blob.vercel-storage.com")) return false;
+    const prefix = `/photos/${userId}-`;
+    return (
+      pathname.startsWith(prefix) &&
+      /\.(jpe?g|png|webp)$/i.test(pathname)
+    );
+  } catch {
+    return false;
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,6 +27,14 @@ export async function POST(req: NextRequest) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const userId = session.user.id;
+
+    const previous = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { photoUrl: true },
+    });
+    const previousUrl = previous?.photoUrl ?? null;
 
     const formData = await req.formData();
     const file = formData.get("photo") as File | null;
@@ -38,7 +61,7 @@ export async function POST(req: NextRequest) {
     }
 
     const ext = file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
-    const filename = `photos/${session.user.id}-${Date.now()}.${ext}`;
+    const filename = `photos/${userId}-${Date.now()}.${ext}`;
 
     // Convert File to Buffer for reliable serverless upload
     const bytes = await file.arrayBuffer();
@@ -50,9 +73,19 @@ export async function POST(req: NextRequest) {
     });
 
     await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: userId },
       data: { photoUrl: blob.url },
     });
+
+    if (
+      previousUrl &&
+      previousUrl !== blob.url &&
+      isOurPreviousProfilePhoto(previousUrl, userId)
+    ) {
+      del(previousUrl).catch((e) =>
+        console.error("Could not delete previous profile photo:", e),
+      );
+    }
 
     return NextResponse.json({ url: blob.url });
   } catch (err: unknown) {

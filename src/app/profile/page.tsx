@@ -14,6 +14,7 @@ import Button from "@/components/ui/Button";
 import { SCHOOLS, MAJORS, ETHNICITIES, GENDERS } from "@/lib/constants";
 import type { ContactMethod } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import ProfilePhotoPicker from "@/components/profile/ProfilePhotoPicker";
 
 const SCHOOL_OPTIONS = SCHOOLS.map((s) => ({ value: s, label: s }));
 const MAJOR_OPTIONS = MAJORS.map((m) => ({ value: m, label: m }));
@@ -67,6 +68,7 @@ export default function ProfilePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -96,6 +98,7 @@ export default function ProfilePage() {
         setSelectedEthnicities(ethnicityApiToSelected(data.ethnicity));
         setContactMethod(parseContactMethod(data.contactMethod));
         setContactValue(typeof data.contactValue === "string" ? data.contactValue : "");
+        setPhotoUrl(typeof data.photoUrl === "string" ? data.photoUrl : null);
       } catch (e) {
         if (!cancelled) {
           setLoadError(e instanceof Error ? e.message : "Failed to load profile");
@@ -230,7 +233,13 @@ export default function ProfilePage() {
           )}
 
           {/* Profile form */}
-          <Card className="mb-6">
+          <Card id="photo" className="mb-6">
+            <ProfilePhotoPicker
+              photoUrl={photoUrl}
+              onUploaded={setPhotoUrl}
+              disabled={isPageLoading}
+            />
+            <div className="h-px bg-border-light my-6" aria-hidden />
             <div className="flex flex-col gap-5">
               <Input
                 label="First name"

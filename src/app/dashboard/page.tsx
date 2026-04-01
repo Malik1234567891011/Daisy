@@ -12,8 +12,9 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
 import {
   Users, Send, Sparkles, User, Settings, Mail, Heart, X,
-  MapPin, Clock, Bell, Calendar,
+  MapPin, Bell, Calendar,
 } from "lucide-react";
+import ProfilePhotoPicker from "@/components/profile/ProfilePhotoPicker";
 import { INTENTIONS, VIBES, IDEAL_HANGOUTS } from "@/lib/constants";
 
 /* ─── Types ─── */
@@ -26,6 +27,7 @@ type UserData = {
   referralCount: number;
   phoneVerified: boolean;
   onboardingComplete: boolean;
+  photoUrl: string | null;
   createdAt: string;
 };
 
@@ -118,7 +120,15 @@ function PulsingDot() {
 }
 
 /* ─── Waitlist Dashboard ─── */
-function WaitlistDashboard({ user, loading }: { user: UserData | null; loading: boolean }) {
+function WaitlistDashboard({
+  user,
+  loading,
+  onPhotoUploaded,
+}: {
+  user: UserData | null;
+  loading: boolean;
+  onPhotoUploaded: (url: string) => void;
+}) {
   const greeting = useMemo(() => getGreeting(), []);
   const nextDrop = useMemo(() => getNextDropDate(), []);
   const countdown = useCountdown(nextDrop);
@@ -186,6 +196,16 @@ function WaitlistDashboard({ user, loading }: { user: UserData | null; loading: 
             <CountdownUnit value={countdown.minutes} label="min" />
           </div>
         </div>
+      </Card>
+
+      {/* Profile photo */}
+      <Card className="mb-6">
+        <ProfilePhotoPicker
+          photoUrl={user?.photoUrl ?? null}
+          onUploaded={onPhotoUploaded}
+          disabled={loading || !user}
+          variant="compact"
+        />
       </Card>
 
       {/* Status + Invite */}
@@ -376,6 +396,12 @@ function MatchDashboard({
           </div>
         )}
       </Card>
+
+      <p className="max-w-sm mx-auto mt-8 text-center text-xs text-text-tertiary">
+        <Link href="/profile#photo" className="font-medium text-sage hover:text-olive underline-offset-4 hover:underline">
+          Update your profile photo
+        </Link>
+      </p>
     </div>
   );
 }
@@ -443,6 +469,11 @@ function MutualDashboard({ match }: { match: MatchData }) {
       <div className="max-w-sm mx-auto text-center">
         <p className="text-sm text-text-tertiary">
           Take it from here. Be kind, be yourself, and have fun.
+        </p>
+        <p className="mt-6 text-xs text-text-tertiary">
+          <Link href="/profile#photo" className="font-medium text-sage hover:text-olive underline-offset-4 hover:underline">
+            Update your profile photo
+          </Link>
         </p>
       </div>
     </div>
@@ -571,7 +602,13 @@ export default function DashboardPage() {
         ) : hasMatch && !isDeclined ? (
           <MatchDashboard match={match!} onDecision={handleDecision} deciding={deciding} />
         ) : (
-          <WaitlistDashboard user={user} loading={isLoading} />
+          <WaitlistDashboard
+            user={user}
+            loading={isLoading}
+            onPhotoUploaded={(url) =>
+              setUser((prev) => (prev ? { ...prev, photoUrl: url } : null))
+            }
+          />
         )}
       </main>
       <Footer />
