@@ -7,6 +7,10 @@ import { Chip } from "@/components/ui/Chip";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { MAJORS, ETHNICITIES, GENDER_PREFERENCES } from "@/lib/constants";
+import {
+  parseEthnicityPreference,
+  stringifyEthnicityPreference,
+} from "@/lib/ethnicityPreference";
 import type { UserPreferences } from "@/lib/types";
 
 interface StepPreferencesProps {
@@ -172,41 +176,50 @@ export default function StepPreferences({
           options={majorOptions}
         />
 
-        {/* Ethnicity preference */}
+        {/* Ethnicity preference — multi-select; stored as comma-separated string */}
         <fieldset>
           <legend className="text-sm font-medium text-charcoal mb-1">
             Ethnicity preference
           </legend>
           <p className="text-sm text-text-tertiary mb-3">
-            Optional &mdash; leave blank to match with everyone
+            Optional &mdash; pick any that apply, or leave open to match with everyone
           </p>
           <div
             className="flex flex-wrap gap-2.5"
             role="listbox"
             aria-label="Ethnicity preference"
+            aria-multiselectable="true"
           >
             <Chip
-              selected={!preferences.ethnicityPreference}
+              selected={parseEthnicityPreference(preferences.ethnicityPreference).length === 0}
               onToggle={() =>
                 onPreferencesChange({ ethnicityPreference: undefined })
               }
             >
               No preference
             </Chip>
-            {ETHNICITIES.map((eth) => (
-              <Chip
-                key={eth}
-                selected={preferences.ethnicityPreference === eth}
-                onToggle={() =>
-                  onPreferencesChange({
-                    ethnicityPreference:
-                      preferences.ethnicityPreference === eth ? undefined : eth,
-                  })
-                }
-              >
-                {eth}
-              </Chip>
-            ))}
+            {ETHNICITIES.map((eth) => {
+              const selected = parseEthnicityPreference(
+                preferences.ethnicityPreference,
+              );
+              const has = selected.includes(eth);
+              return (
+                <Chip
+                  key={eth}
+                  selected={has}
+                  onToggle={() => {
+                    const next = has
+                      ? selected.filter((e) => e !== eth)
+                      : [...selected, eth];
+                    onPreferencesChange({
+                      ethnicityPreference: stringifyEthnicityPreference(next),
+                    });
+                  }}
+                >
+                  {eth}
+                </Chip>
+              );
+            })}
           </div>
         </fieldset>
 

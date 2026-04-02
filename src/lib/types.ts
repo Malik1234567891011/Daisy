@@ -20,6 +20,7 @@ export interface UserPreferences {
   schoolPreference: "same" | "nearby" | "any";
   ageRange: { min: number; max: number };
   majorPreference: string;
+  /** Comma-separated ethnicity labels; empty / omitted = open to all */
   ethnicityPreference?: string;
 }
 

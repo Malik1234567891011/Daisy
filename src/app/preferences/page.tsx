@@ -12,6 +12,10 @@ import { Select } from "@/components/ui/Select";
 import { Chip } from "@/components/ui/Chip";
 import Button from "@/components/ui/Button";
 import { MAJORS, ETHNICITIES, GENDER_PREFERENCES } from "@/lib/constants";
+import {
+  parseEthnicityPreference,
+  stringifyEthnicityPreference,
+} from "@/lib/ethnicityPreference";
 import { cn } from "@/lib/utils";
 
 type SchoolPreference = "same" | "nearby" | "any";
@@ -39,14 +43,6 @@ type Baseline = {
 function normalizeSchoolPreference(value: unknown): SchoolPreference {
   if (value === "same" || value === "nearby" || value === "any") return value;
   return "any";
-}
-
-function parseEthnicityPreference(raw: string | null | undefined): string[] {
-  if (raw == null || !String(raw).trim()) return [];
-  return String(raw)
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
 }
 
 export default function PreferencesPage() {
@@ -164,7 +160,7 @@ export default function PreferencesPage() {
           ageRangeMin: ageMin,
           ageRangeMax: ageMax,
           majorPreference: majorPref,
-          ethnicityPreference: ethPrefs.length > 0 ? ethPrefs.join(",") : "",
+          ethnicityPreference: stringifyEthnicityPreference(ethPrefs) ?? "",
         }),
       });
       const body = await res.json().catch(() => null);
@@ -390,7 +386,7 @@ export default function PreferencesPage() {
                     Ethnicity preference <span className="font-normal text-text-tertiary">(optional)</span>
                   </p>
                   <p className="mb-3 text-sm text-text-tertiary">
-                    Optional — leave blank to match with everyone.
+                    Optional — select all that apply, or leave blank to match with everyone.
                   </p>
                   <div className="flex flex-wrap gap-2" role="listbox" aria-label="Ethnicity preference" aria-multiselectable="true">
                     {ETHNICITIES.map((eth) => (

@@ -3,6 +3,7 @@
 import { Card } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { INTENTIONS, VIBES, IDEAL_HANGOUTS, AVAILABILITY } from "@/lib/constants";
+import { parseEthnicityPreference } from "@/lib/ethnicityPreference";
 import type { OnboardingData } from "@/lib/types";
 
 interface StepReviewProps {
@@ -151,8 +152,11 @@ export default function StepReview({
             value={preferences.majorPreference || "No preference"}
           />
           <InfoRow
-            label="Ethnicity"
-            value={preferences.ethnicityPreference || "No preference"}
+            label="Ethnicity preference"
+            value={
+              parseEthnicityPreference(preferences.ethnicityPreference).join(", ") ||
+              "No preference"
+            }
           />
         </Card>
 

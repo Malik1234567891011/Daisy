@@ -39,7 +39,7 @@ export default function ProfilePhotoPicker({
       if (!file) return;
 
       if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-        setError("Please use JPG, PNG, or WebP");
+        setError("That doesn’t look like a photo. Try another one.");
         return;
       }
 
@@ -57,14 +57,24 @@ export default function ProfilePhotoPicker({
         const res = await fetch("/api/upload", { method: "POST", body: form });
         const data = await res.json();
 
-        if (!res.ok) throw new Error(data.error || "Upload failed");
+        if (!res.ok) {
+          const raw = typeof data.error === "string" ? data.error : "";
+          if (raw.includes("under 3 MB") || raw.includes("3 MB")) {
+            throw new Error("That photo’s a bit too big. Try another one.");
+          }
+          if (raw.includes("Only JPG") || raw.includes("JPG, PNG")) {
+            throw new Error("That file type didn’t work. Try another photo.");
+          }
+          throw new Error("Couldn’t upload that one. Try again?");
+        }
 
         setPreview(null);
         onUploaded(data.url as string);
         setJustSaved(true);
         setTimeout(() => setJustSaved(false), 2500);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Upload failed");
+        const msg = err instanceof Error ? err.message : "";
+        setError(msg && !msg.includes("Upload failed") ? msg : "Something went wrong. Try again?");
         setPreview(null);
       } finally {
         setUploading(false);
@@ -147,8 +157,6 @@ export default function ProfilePhotoPicker({
           className="hidden"
         />
       </div>
-
-      <p className="mt-3 text-xs text-text-tertiary">JPG, PNG, or WebP · max 3 MB</p>
 
       {error && (
         <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
