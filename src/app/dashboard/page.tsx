@@ -156,7 +156,6 @@ function MatchClosedDashboard({
 }) {
   const nextDrop = useMemo(() => getNextDropDate(), []);
   const countdown = useSecondsCountdown(nextDrop);
-  const wedLabel = nextDrop.toLocaleDateString("en-US", { weekday: "long" });
 
   return (
     <div className="section-container py-12 sm:py-16 max-w-lg mx-auto">
@@ -169,13 +168,17 @@ function MatchClosedDashboard({
             <>
               You passed on this one.
               <br />
-              <span className="text-text-tertiary">No worries &mdash; you&rsquo;ll get a new match next {wedLabel.toLowerCase()}.</span>
+              <span className="text-text-tertiary">
+                no worries &mdash; you&rsquo;ll get a new match next wednesday.
+              </span>
             </>
           ) : (
             <>
-              They weren&rsquo;t interested this time.
+              they weren&rsquo;t interested this time.
               <br />
-              <span className="text-text-tertiary">No worries &mdash; you&rsquo;ll get a new match next {wedLabel.toLowerCase()}.</span>
+              <span className="text-text-tertiary">
+                no worries &mdash; you&rsquo;ll get a new match next wednesday.
+              </span>
             </>
           )}
         </p>
@@ -187,7 +190,7 @@ function MatchClosedDashboard({
           aria-hidden="true"
         />
         <div className="relative z-10 px-2">
-          <p className="text-sm font-medium text-text-secondary mb-5">Next match in:</p>
+          <p className="text-sm font-medium text-text-secondary mb-5">next match in:</p>
           <div className="flex items-start justify-center gap-3 sm:gap-5 flex-wrap">
             <CountdownUnitSm value={countdown.days} label="days" />
             <span className="text-xl text-border-light font-light pt-1" aria-hidden="true">
