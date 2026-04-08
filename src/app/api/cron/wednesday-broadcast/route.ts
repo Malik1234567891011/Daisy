@@ -25,8 +25,8 @@ function authorizeCron(req: NextRequest): boolean {
 }
 
 /**
- * Vercel Cron: twice on Wednesday UTC (hours 22 and 23) so 6 PM Toronto works in EDT and EST.
- * Only runs inside the 6:00–6:14 PM America/Toronto window.
+ * Vercel Cron: once on Wednesday 22:00 UTC (`0 22 * * 3`). Handler only sends during the
+ * Wednesday 5:00–6:14 PM Toronto window (covers EST vs EDT). Manual: GET with Bearer CRON_SECRET.
  *
  * Env: CRON_SECRET (required), Twilio + DATABASE_URL, optional BROADCAST_REQUIRE_RECENT_DROP=no
  */

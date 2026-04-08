@@ -40,8 +40,9 @@ export function torontoDateKey(d: Date): string {
 }
 
 /**
- * True during the intended Wednesday 6:00–6:14 PM window in Toronto.
- * Cron should hit twice on Wednesday UTC (hours 22 and 23) so DST is covered.
+ * True during Wednesday ~5:00–6:14 PM Toronto (first quarter of the 5pm or 6pm hour).
+ * Vercel cron runs once at 22:00 UTC (`0 22 * * 3`): in summer that is 6:00 PM Toronto,
+ * in winter 5:00 PM — one slot covers both without a second daily cron.
  */
 export function isWednesdaySixPmTorontoWindow(now: Date): boolean {
   const weekday = new Intl.DateTimeFormat("en-US", {
@@ -60,7 +61,7 @@ export function isWednesdaySixPmTorontoWindow(now: Date): boolean {
   }).format(now);
   const hour = parseInt(hourStr, 10);
   const minute = parseInt(minuteStr, 10);
-  return hour === 18 && minute < 15;
+  return (hour === 17 || hour === 18) && minute < 15;
 }
 
 /**
