@@ -55,6 +55,9 @@ model User {
 
   onboardingComplete Boolean @default(false)
 
+  passwordResetTokenHash String?   @unique
+  passwordResetExpires DateTime?
+
   // Match relations
   matchesAsA Match[] @relation("matchUserA")
   matchesAsB Match[] @relation("matchUserB")
@@ -105,4 +108,13 @@ enum MatchStatus {
   MUTUAL
   EXPIRED
   DECLINED
+}
+
+/// Prevents the Wednesday SMS cron from texting the same week twice (e.g. retries).
+model BroadcastDedupe {
+  job       String
+  periodKey String
+  createdAt DateTime @default(now())
+
+  @@id([job, periodKey])
 }

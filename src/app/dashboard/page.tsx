@@ -60,6 +60,7 @@ type MatchData = {
   dropDate?: string;
   partner?: MatchPartner;
   suggestedSpot?: MeetingSpot | null;
+  closedMatch?: { youDeclined: boolean };
 };
 
 /* ─── Helpers ─── */
@@ -96,6 +97,21 @@ function useCountdown(target: Date) {
   };
 }
 
+function useSecondsCountdown(target: Date) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const diff = Math.max(0, target.getTime() - now.getTime());
+  return {
+    days: Math.floor(diff / 86_400_000),
+    hours: Math.floor((diff % 86_400_000) / 3_600_000),
+    minutes: Math.floor((diff % 3_600_000) / 60_000),
+    seconds: Math.floor((diff % 60_000) / 1000),
+  };
+}
+
 function getLabel(list: { value: string; label: string }[], val: string | null): string {
   if (!val) return "";
   return list.find((i) => i.value === val)?.label ?? val;
@@ -110,12 +126,100 @@ function CountdownUnit({ value, label }: { value: number; label: string }) {
   );
 }
 
+function CountdownUnitSm({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="flex flex-col items-center min-w-[3rem]">
+      <span className="font-display text-2xl sm:text-3xl text-charcoal leading-none tabular-nums">
+        {value}
+      </span>
+      <span className="text-[10px] text-text-tertiary mt-1 uppercase tracking-widest">{label}</span>
+    </div>
+  );
+}
+
 function PulsingDot() {
   return (
     <span className="relative flex h-2 w-2">
       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sage opacity-40" />
       <span className="relative inline-flex h-2 w-2 rounded-full bg-sage" />
     </span>
+  );
+}
+
+/* ─── Match closed (calm retention, not rejection drama) ─── */
+function MatchClosedDashboard({
+  youDeclined,
+  onBackToDashboard,
+}: {
+  youDeclined: boolean;
+  onBackToDashboard: () => void;
+}) {
+  const nextDrop = useMemo(() => getNextDropDate(), []);
+  const countdown = useSecondsCountdown(nextDrop);
+  const wedLabel = nextDrop.toLocaleDateString("en-US", { weekday: "long" });
+
+  return (
+    <div className="section-container py-12 sm:py-16 max-w-lg mx-auto">
+      <section className="text-center sm:text-left mb-10">
+        <h1 className="font-display text-2xl sm:text-3xl text-charcoal text-balance">
+          this match didn&rsquo;t work out
+        </h1>
+        <p className="mt-4 text-text-secondary leading-relaxed text-[15px] sm:text-base">
+          {youDeclined ? (
+            <>
+              You passed on this one.
+              <br />
+              <span className="text-text-tertiary">No worries &mdash; you&rsquo;ll get a new match next {wedLabel.toLowerCase()}.</span>
+            </>
+          ) : (
+            <>
+              They weren&rsquo;t interested this time.
+              <br />
+              <span className="text-text-tertiary">No worries &mdash; you&rsquo;ll get a new match next {wedLabel.toLowerCase()}.</span>
+            </>
+          )}
+        </p>
+      </section>
+
+      <Card className="mb-8 text-center py-8 sm:py-10 relative overflow-hidden">
+        <div
+          className="absolute inset-0 bg-gradient-to-br from-sage-pale/15 via-transparent to-butter-pale/10"
+          aria-hidden="true"
+        />
+        <div className="relative z-10 px-2">
+          <p className="text-sm font-medium text-text-secondary mb-5">Next match in:</p>
+          <div className="flex items-start justify-center gap-3 sm:gap-5 flex-wrap">
+            <CountdownUnitSm value={countdown.days} label="days" />
+            <span className="text-xl text-border-light font-light pt-1" aria-hidden="true">
+              :
+            </span>
+            <CountdownUnitSm value={countdown.hours} label="hrs" />
+            <span className="text-xl text-border-light font-light pt-1" aria-hidden="true">
+              :
+            </span>
+            <CountdownUnitSm value={countdown.minutes} label="min" />
+            <span className="text-xl text-border-light font-light pt-1" aria-hidden="true">
+              :
+            </span>
+            <CountdownUnitSm value={countdown.seconds} label="sec" />
+          </div>
+        </div>
+      </Card>
+
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4">
+        <Button
+          type="button"
+          size="lg"
+          className="w-full sm:w-auto sm:min-w-[200px]"
+          onClick={onBackToDashboard}
+        >
+          Back to dashboard
+        </Button>
+        <Button variant="ghost" size="lg" className="w-full sm:w-auto sm:min-w-[200px]" href="/profile">
+          Edit your profile
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -523,6 +627,7 @@ export default function DashboardPage() {
   const [match, setMatch] = useState<MatchData | null>(null);
   const [loading, setLoading] = useState(true);
   const [deciding, setDeciding] = useState(false);
+  const [matchClosedCalmDismissed, setMatchClosedCalmDismissed] = useState(false);
 
   useEffect(() => {
     if (status !== "authenticated") {
@@ -552,6 +657,10 @@ export default function DashboardPage() {
 
     return () => { cancelled = true; };
   }, [status, router]);
+
+  useEffect(() => {
+    if (!match?.closedMatch) setMatchClosedCalmDismissed(false);
+  }, [match?.closedMatch]);
 
   const handleDecision = useCallback(
     async (decision: "INTERESTED" | "DECLINED") => {
@@ -585,7 +694,8 @@ export default function DashboardPage() {
   // Determine dashboard state
   const hasMatch = match?.hasMatch === true;
   const isMutual = match?.isMutual === true;
-  const isDeclined = match?.status === "DECLINED";
+  const showClosedMatch = !hasMatch && match?.closedMatch;
+  const showMatchClosedCalm = showClosedMatch && !matchClosedCalmDismissed;
 
   return (
     <div className="flex min-h-dvh flex-col bg-ivory bg-grain">
@@ -599,8 +709,13 @@ export default function DashboardPage() {
           </div>
         ) : isMutual ? (
           <MutualDashboard match={match!} />
-        ) : hasMatch && !isDeclined ? (
+        ) : hasMatch ? (
           <MatchDashboard match={match!} onDecision={handleDecision} deciding={deciding} />
+        ) : showMatchClosedCalm ? (
+          <MatchClosedDashboard
+            youDeclined={match!.closedMatch!.youDeclined}
+            onBackToDashboard={() => setMatchClosedCalmDismissed(true)}
+          />
         ) : (
           <WaitlistDashboard
             user={user}

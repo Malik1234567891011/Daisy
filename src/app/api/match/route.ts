@@ -37,6 +37,29 @@ export async function GET() {
     });
 
     if (!match) {
+      const lastClosed = await prisma.match.findFirst({
+        where: {
+          OR: [{ userAId: userId }, { userBId: userId }],
+          status: "DECLINED",
+        },
+        orderBy: { dropDate: "desc" },
+        select: {
+          userAId: true,
+          userADecision: true,
+          userBDecision: true,
+        },
+      });
+
+      if (lastClosed) {
+        const isUserA = lastClosed.userAId === userId;
+        const myDecision = isUserA ? lastClosed.userADecision : lastClosed.userBDecision;
+        const youDeclined = myDecision === "DECLINED";
+        return NextResponse.json({
+          hasMatch: false,
+          closedMatch: { youDeclined },
+        });
+      }
+
       return NextResponse.json({ hasMatch: false });
     }
 

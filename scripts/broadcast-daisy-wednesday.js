@@ -41,28 +41,28 @@ var twilio = require("twilio");
 var BASE_URL = (
   process.env.BROADCAST_SITE_URL ||
   process.env.NEXT_PUBLIC_URL ||
-  "https://joindaisy.com"
+  "https://www.daisyweekly.com"
 ).replace(/\/$/, "");
 var SUPPORT = process.env.BROADCAST_SUPPORT_EMAIL || "hello@joindaisy.com";
 
-/** Override with env: use {{URL}} for site root, {{DASHBOARD}} for site + /dashboard, {{EMAIL}} for support */
+/** Override with env: {{URL}} = site root, {{DASHBOARD}} = /dashboard, {{EMAIL}} = support */
 function buildBody() {
+  var dash = BASE_URL + "/dashboard";
   var custom = process.env.BROADCAST_BODY;
   if (custom && String(custom).trim()) {
     return String(custom)
       .trim()
+      .replace(/\{\{DASHBOARD\}\}/g, dash)
       .replace(/\{\{URL\}\}/g, BASE_URL)
-      .replace(/\{\{DASHBOARD\}\}/g, BASE_URL + "/dashboard")
       .replace(/\{\{EMAIL\}\}/g, SUPPORT);
   }
   return (
-    "Hey everyone — it's Daisy Wednesday. Your matches are ready. Open the site: " +
-    BASE_URL +
-    "/dashboard — you should see your match there. Tap Interested if you want to connect; when you both do, your contact info is revealed. " +
-    "Some of you may not have a match yet — we're still pairing; hang tight. " +
-    "Questions? Email " +
-    SUPPORT +
-    "."
+    "Daisy 🌼 your match is ready.\n\n" +
+    "Every Wednesday we match you with 1 student in Montreal.\n" +
+    "Open your dashboard to see them.\n\n" +
+    "If you both say yes, you'll unlock each other's contact.\n\n" +
+    "👉 " +
+    dash
   );
 }
 

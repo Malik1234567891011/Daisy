@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";
@@ -11,6 +11,19 @@ import DaisyLogo from "@/components/layout/DaisyLogo";
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function PasswordResetSuccessBanner() {
+  const searchParams = useSearchParams();
+  if (searchParams.get("reset") !== "success") return null;
+  return (
+    <p
+      className="mb-5 rounded-xl border border-sage-light/30 bg-sage-pale/40 px-4 py-3 text-center text-sm text-charcoal"
+      role="status"
+    >
+      Your password was updated. Sign in with your new password.
+    </p>
+  );
 }
 
 export default function LoginPage() {
@@ -90,6 +103,10 @@ export default function LoginPage() {
               Sign in to check on your matches
             </p>
           </div>
+
+          <Suspense fallback={null}>
+            <PasswordResetSuccessBanner />
+          </Suspense>
 
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             <Input

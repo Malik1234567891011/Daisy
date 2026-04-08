@@ -44,8 +44,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "TWILIO_PHONE_NUMBER not configured" }, { status: 500 });
     }
 
-    const body = customMessage ||
-      `Your Daisy match just dropped 🌼 Tap to see them: ${process.env.NEXT_PUBLIC_URL || "https://joindaisy.com"}/dashboard`;
+    const siteBase = (
+      process.env.BROADCAST_SITE_URL ||
+      process.env.NEXT_PUBLIC_URL ||
+      "https://www.daisyweekly.com"
+    ).replace(/\/$/, "");
+    const body =
+      customMessage ||
+      `Daisy 🌼 your match is ready. Open your dashboard: ${siteBase}/dashboard`;
 
     const msg = await twilioClient.messages.create({
       to: user.phoneNumber,
