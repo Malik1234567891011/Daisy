@@ -589,6 +589,22 @@ function MutualDashboard({ match }: { match: MatchData }) {
 
 /* ─── Account Section ─── */
 function AccountSection({ user, loading }: { user: UserData | null; loading: boolean }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/user/delete", { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      await signOut({ callbackUrl: "/" });
+    } catch {
+      setDeleting(false);
+      setConfirmDelete(false);
+      alert("Something went wrong. Please try again.");
+    }
+  }
+
   return (
     <section>
       <h2 className="font-display text-lg text-charcoal mb-5">Account</h2>
@@ -607,15 +623,42 @@ function AccountSection({ user, loading }: { user: UserData | null; loading: boo
               Sign out
             </Button>
           </div>
-          <button
-            type="button"
-            className={cn(
-              "self-start text-sm text-error hover:underline underline-offset-4",
-              "transition-colors duration-150 hover:text-error/80",
-            )}
-          >
-            Delete account
-          </button>
+          {!confirmDelete ? (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className={cn(
+                "self-start text-sm text-error hover:underline underline-offset-4",
+                "transition-colors duration-150 hover:text-error/80",
+              )}
+            >
+              Delete account
+            </button>
+          ) : (
+            <div className="flex flex-col gap-2 rounded-lg border border-error/20 bg-error/5 p-3">
+              <p className="text-sm text-error font-medium">
+                Are you sure? This permanently deletes your account and all data.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={handleDelete}
+                  className="rounded-md bg-error px-3 py-1.5 text-sm font-medium text-white hover:bg-error/90 disabled:opacity-50"
+                >
+                  {deleting ? "Deleting…" : "Yes, delete"}
+                </button>
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => setConfirmDelete(false)}
+                  className="rounded-md border border-border-light px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-dim"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </Card>
     </section>

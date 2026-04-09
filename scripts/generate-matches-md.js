@@ -65,10 +65,15 @@ var VALID_DOMAINS = [
 var MARKETING_REFERRAL_CODES = ["Gc1D1NUw"];
 
 /** Do not match these first names (trimmed, case-insensitive) */
-var EXCLUDE_FIRST_NAMES = ["sky", "dawson"];
+var EXCLUDE_FIRST_NAMES = ["dawson", "kamil", "vincent", "malik"];
+
+/** Specific emails to force-include even if domain looks suspect */
+var WHITELISTED_EMAILS = [
+  "y_zahe@liveconcordia.onmicrosoft.com", // Yehia — Concordia Microsoft 365 backend domain
+];
 
 /** Match last: greedy processes edges without these before any edge involving them */
-var DEPRIORITIZE_FIRST_NAMES = ["kamil", "vincent", "malik"];
+var DEPRIORITIZE_FIRST_NAMES = [];
 
 function normName(s) {
   return String(s || "")
@@ -88,8 +93,18 @@ function isSuspectEmail(email) {
   return true;
 }
 
+function isWhitelistedEmail(email) {
+  if (!email) return false;
+  var lower = email.toLowerCase();
+  for (var i = 0; i < WHITELISTED_EMAILS.length; i++) {
+    if (lower === WHITELISTED_EMAILS[i].toLowerCase()) return true;
+  }
+  return false;
+}
+
 function isExcludedFromMatching(u) {
-  if (isSuspectEmail(u.email)) return "non-school / suspect email";
+  if (isSuspectEmail(u.email) && !isWhitelistedEmail(u.email))
+    return "non-school / suspect email";
   var em = String(u.email || "").toLowerCase();
   if (em.indexOf("confessions") !== -1) return "org / confessions-style account";
   if (em.indexOf("@office.") !== -1) return "org / office email";
@@ -132,6 +147,28 @@ function findOmar(users) {
     if (normName(users[i].firstName) === "omar") return users[i];
   }
   return null;
+}
+
+function findSky(users) {
+  for (var i = 0; i < users.length; i++) {
+    if (normName(users[i].firstName) === "sky" && users[i].gender === "Woman")
+      return users[i];
+  }
+  return null;
+}
+
+function findYehia(users) {
+  for (var i = 0; i < users.length; i++) {
+    if (normName(users[i].firstName) === "yehia") return users[i];
+  }
+  return null;
+}
+
+function isWomanSeekingWomen(u) {
+  return (
+    u.gender === "Woman" &&
+    (u.genderPreference === "Women" || u.genderPreference === "Everyone")
+  );
 }
 
 function genderCompatible(pref, partnerGender) {
@@ -395,6 +432,65 @@ prisma.user
       notes.push("No user named **Omar** in eligible pool.");
     }
 
+    /* Priority: Sky × woman who seeks women (same photo bucket as Sky) */
+    var sky = findSky(eligible);
+    if (sky && !used[sky.id]) {
+      var skyPool = sky.photoUrl ? withPhoto : noPhoto;
+      var skyBest = null;
+      for (var si = 0; si < skyPool.length; si++) {
+        var sc3 = skyPool[si];
+        if (sc3.id === sky.id || used[sc3.id]) continue;
+        if (!isWomanSeekingWomen(sc3)) continue;
+        if (!pairEligible(sky, sc3)) continue;
+        var skyS = softScore(sky, sc3) + softScore(sc3, sky);
+        var skyO = overlap(sky.interests || [], sc3.interests || []);
+        if (!skyBest || skyS > skyBest.score || (skyS === skyBest.score && skyO > skyBest.interestOverlap)) {
+          skyBest = { a: sky, b: sc3, score: skyS, interestOverlap: skyO, pinNote: "Sky pin (W4W)" };
+        }
+      }
+      if (skyBest) {
+        used[skyBest.a.id] = true;
+        used[skyBest.b.id] = true;
+        pairs.push(skyBest);
+        notes.push(
+          "Pinned **Sky** with **" + (skyBest.b.firstName || "?") + "** (woman seeking women, best score).",
+        );
+      } else {
+        notes.push("Could not pin Sky to a woman seeking women — none eligible in her bucket.");
+      }
+    } else if (!sky) {
+      notes.push("No user named **Sky** (Woman) in eligible pool.");
+    }
+
+    /* Priority: ensure Yehia gets a match */
+    var yehia = findYehia(eligible);
+    if (yehia && !used[yehia.id]) {
+      var yehiaPool = yehia.photoUrl ? withPhoto : noPhoto;
+      var yehiaBest = null;
+      for (var yi = 0; yi < yehiaPool.length; yi++) {
+        var yc = yehiaPool[yi];
+        if (yc.id === yehia.id || used[yc.id]) continue;
+        if (!pairEligible(yehia, yc)) continue;
+        var yS = softScore(yehia, yc) + softScore(yc, yehia);
+        var yO = overlap(yehia.interests || [], yc.interests || []);
+        if (!yehiaBest || yS > yehiaBest.score || (yS === yehiaBest.score && yO > yehiaBest.interestOverlap)) {
+          yehiaBest = { a: yehia, b: yc, score: yS, interestOverlap: yO, pinNote: "Yehia pin" };
+        }
+      }
+      if (yehiaBest) {
+        used[yehiaBest.a.id] = true;
+        used[yehiaBest.b.id] = true;
+        pairs.push(yehiaBest);
+        notes.push(
+          "Pinned **Yehia** with **" + (yehiaBest.b.firstName || "?") + "** (best score in bucket).",
+        );
+      } else {
+        notes.push("Could not pin Yehia — no eligible partner in his bucket.");
+      }
+    } else if (!yehia) {
+      notes.push("No user named **Yehia** in eligible pool.");
+    }
+
     var edgesPhoto = buildEdges(withPhoto);
     var edgesNoPhoto = buildEdges(noPhoto);
 
@@ -408,6 +504,69 @@ prisma.user
 
     var poolAll = withPhoto.concat(noPhoto);
     var unmatched = poolAll.filter(function (u) {
+      return !used[u.id];
+    });
+
+    /* Last-resort pass: pair remaining unmatched users with suspect-email-only
+       excluded users (photo bucket rules still apply). */
+    var suspectOnly = excluded.filter(function (row) {
+      return row.why === "non-school / suspect email";
+    }).map(function (row) { return row.u; });
+
+    var suspectWithPhoto = suspectOnly.filter(function (u) { return !!u.photoUrl; });
+    var suspectNoPhoto = suspectOnly.filter(function (u) { return !u.photoUrl; });
+
+    var lastResortPairs = [];
+    var unmatchedWithPhoto = unmatched.filter(function (u) { return !!u.photoUrl; });
+    var unmatchedNoPhoto = unmatched.filter(function (u) { return !u.photoUrl; });
+
+    function lastResortGreedy(unmatchedBucket, suspectBucket) {
+      var edges = [];
+      for (var i = 0; i < unmatchedBucket.length; i++) {
+        for (var j = 0; j < suspectBucket.length; j++) {
+          var a = unmatchedBucket[i];
+          var b = suspectBucket[j];
+          if (used[a.id] || used[b.id]) continue;
+          if (!pairEligible(a, b)) continue;
+          var s = softScore(a, b) + softScore(b, a);
+          var io = overlap(a.interests || [], b.interests || []);
+          edges.push({ a: a, b: b, score: s, interestOverlap: io, pinNote: "last-resort (suspect email)" });
+        }
+      }
+      edges.sort(function (x, y) {
+        if (y.score !== x.score) return y.score - x.score;
+        if (y.interestOverlap !== x.interestOverlap) return y.interestOverlap - x.interestOverlap;
+        return 0;
+      });
+      for (var e = 0; e < edges.length; e++) {
+        var ed = edges[e];
+        if (used[ed.a.id] || used[ed.b.id]) continue;
+        used[ed.a.id] = true;
+        used[ed.b.id] = true;
+        pairs.push(ed);
+        lastResortPairs.push(ed);
+      }
+    }
+
+    lastResortGreedy(unmatchedWithPhoto, suspectWithPhoto);
+    lastResortGreedy(unmatchedNoPhoto, suspectNoPhoto);
+
+    if (lastResortPairs.length > 0) {
+      notes.push("**Last-resort pass:** matched " + lastResortPairs.length + " additional pair(s) using suspect-email users.");
+      // Remove newly matched suspect users from the excluded list
+      for (var lr = 0; lr < lastResortPairs.length; lr++) {
+        var lrB = lastResortPairs[lr].b.id;
+        var lrA = lastResortPairs[lr].a.id;
+        excluded = excluded.filter(function (row) {
+          return row.u.id !== lrB && row.u.id !== lrA;
+        });
+      }
+    } else {
+      notes.push("**Last-resort pass:** no additional pairs found from suspect-email pool.");
+    }
+
+    // Recompute unmatched
+    unmatched = poolAll.filter(function (u) {
       return !used[u.id];
     });
 
@@ -427,7 +586,7 @@ prisma.user
     lines.push("## Special rules for this run");
     lines.push("");
     lines.push(
-      "- **Excluded from matching:** non-school / suspect emails; emails with **confessions** or **`@office.`**; first names **Sky**, **Dawson**; accounts that **own** marketing referral code `Gc1D1NUw` (Dawson promo profile).",
+      "- **Excluded from matching:** non-school / suspect emails (except whitelisted); emails with **confessions** or **`@office.`**; first names **Dawson**, **Kamil**, **Vincent**, **Malik**; accounts that **own** marketing referral code `Gc1D1NUw` (Dawson promo profile).",
     );
     lines.push(
       "- **Photo buckets:** users **with photo** only match others **with photo**; users **without photo** only match others **without photo** (no cross-bucket pairs).",
@@ -436,7 +595,10 @@ prisma.user
       "- **Omar:** if present, pinned to the best-scoring **Asian woman** in his bucket. Full filters first; if none, **relaxed pin** (still gender + age + her ethnicity contains “Asian”; school/ethnicity *preference* waived for that pair only).",
     );
     lines.push(
-      "- **Deprioritized (matched last):** first names **Kamil**, **Vincent**, **Malik** — greedy considers edges touching them only after all other eligible edges in that bucket.",
+      "- **Sky:** if present, pinned to a **woman seeking women** (best score in her bucket).",
+    );
+    lines.push(
+      "- **Yehia:** whitelisted email (`liveconcordia.onmicrosoft.com`); pinned to best-scoring partner in his bucket.",
     );
     lines.push("");
     for (var n = 0; n < notes.length; n++) lines.push("- " + notes[n]);
@@ -464,7 +626,11 @@ prisma.user
         var an = pr.a.firstName || "?";
         var bn = pr.b.firstName || "?";
         var shared = pr.interestOverlap;
-        var note = pr.pinned ? (pr.relaxedPin ? "Omar pin (relaxed)" : "Omar pin") : "";
+        var note = pr.pinNote
+          ? pr.pinNote
+          : pr.pinned
+            ? (pr.relaxedPin ? "Omar pin (relaxed)" : "Omar pin")
+            : "";
         lines.push(
           "| " +
             (p + 1) +
@@ -503,7 +669,7 @@ prisma.user
             (pr2.a.firstName || "?") +
             " × " +
             (pr2.b.firstName || "?") +
-            (pr2.pinned ? " _(pinned)_" : ""),
+            (pr2.pinNote ? " _(" + pr2.pinNote + ")_" : pr2.pinned ? " _(pinned)_" : ""),
         );
         lines.push("");
         lines.push("- **Score:** " + pr2.score);
