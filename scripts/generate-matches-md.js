@@ -251,16 +251,22 @@ function softScore(a, b) {
   return s;
 }
 
+var _previouslyMatched = {};
+var _wasMatchedLastWeek = {};
+
 function buildEdges(pool) {
   var edges = [];
   for (var i = 0; i < pool.length; i++) {
     for (var j = i + 1; j < pool.length; j++) {
       var a = pool[i];
       var b = pool[j];
+      var pairKey = a.id + ":" + b.id;
+      if (_previouslyMatched[pairKey]) continue;
       if (!pairEligible(a, b)) continue;
       var score = softScore(a, b) + softScore(b, a);
       var interestOverlap = overlap(a.interests || [], b.interests || []);
-      edges.push({ a: a, b: b, score: score, interestOverlap: interestOverlap });
+      var neverMatched = !_wasMatchedLastWeek[a.id] || !_wasMatchedLastWeek[b.id];
+      edges.push({ a: a, b: b, score: score, interestOverlap: interestOverlap, neverMatched: neverMatched });
     }
   }
   return edges;
@@ -268,6 +274,9 @@ function buildEdges(pool) {
 
 function sortEdgesGreedy(edges) {
   edges.sort(function (x, y) {
+    /* Priority 1: edges involving someone who was never matched go first */
+    if (x.neverMatched !== y.neverMatched) return x.neverMatched ? -1 : 1;
+    /* Priority 2: deprioritized names go last */
     var xd = edgeTouchesDeprio(x);
     var yd = edgeTouchesDeprio(y);
     if (xd !== yd) return xd ? 1 : -1;
@@ -331,25 +340,52 @@ prisma.user
     orderBy: { createdAt: "asc" },
   })
   .then(function (users) {
-    return prisma.match
-      .findMany({
-        where: {
-          status: { in: ["PENDING", "MUTUAL"] },
-        },
+    return Promise.all([
+      prisma.match.findMany({
+        where: { status: { in: ["PENDING", "MUTUAL"] } },
         select: { userAId: true, userBId: true },
-      })
-      .then(function (matches) {
-        return { users: users, activeMatchUserIds: matches };
-      });
+      }),
+      prisma.match.findMany({
+        select: { userAId: true, userBId: true },
+      }),
+    ]).then(function (results) {
+      return {
+        users: users,
+        activeMatches: results[0],
+        allHistoricalMatches: results[1],
+      };
+    });
   })
   .then(function (_ref) {
     var users = _ref.users;
-    var active = _ref.activeMatchUserIds;
+    var active = _ref.activeMatches;
+    var allHistory = _ref.allHistoricalMatches;
+
     var busy = {};
     for (var m = 0; m < active.length; m++) {
       busy[active[m].userAId] = true;
       busy[active[m].userBId] = true;
     }
+
+    /* Build set of previously matched pairs (both directions) */
+    var previouslyMatched = {};
+    for (var h = 0; h < allHistory.length; h++) {
+      var keyAB = allHistory[h].userAId + ":" + allHistory[h].userBId;
+      var keyBA = allHistory[h].userBId + ":" + allHistory[h].userAId;
+      previouslyMatched[keyAB] = true;
+      previouslyMatched[keyBA] = true;
+    }
+
+    /* Track who was matched in any previous week */
+    var wasMatchedLastWeek = {};
+    for (var am = 0; am < allHistory.length; am++) {
+      wasMatchedLastWeek[allHistory[am].userAId] = true;
+      wasMatchedLastWeek[allHistory[am].userBId] = true;
+    }
+
+    /* Expose to buildEdges */
+    _previouslyMatched = previouslyMatched;
+    _wasMatchedLastWeek = wasMatchedLastWeek;
 
     var excluded = [];
     var eligible = [];
@@ -383,6 +419,7 @@ prisma.user
       for (var oi = 0; oi < omarPool.length; oi++) {
         var cand = omarPool[oi];
         if (cand.id === omar.id) continue;
+        if (_previouslyMatched[omar.id + ":" + cand.id]) continue;
         if (!isAsianWoman(cand)) continue;
         if (!pairEligible(omar, cand)) continue;
         var sc = softScore(omar, cand) + softScore(cand, omar);
@@ -395,6 +432,7 @@ prisma.user
         for (var oj = 0; oj < omarPool.length; oj++) {
           var c2 = omarPool[oj];
           if (c2.id === omar.id) continue;
+          if (_previouslyMatched[omar.id + ":" + c2.id]) continue;
           if (!pairEligibleOmarPin(omar, c2)) continue;
           var sc2 = softScore(omar, c2) + softScore(c2, omar);
           var io2 = overlap(omar.interests || [], c2.interests || []);
@@ -440,6 +478,7 @@ prisma.user
       for (var si = 0; si < skyPool.length; si++) {
         var sc3 = skyPool[si];
         if (sc3.id === sky.id || used[sc3.id]) continue;
+        if (_previouslyMatched[sky.id + ":" + sc3.id]) continue;
         if (!isWomanSeekingWomen(sc3)) continue;
         if (!pairEligible(sky, sc3)) continue;
         var skyS = softScore(sky, sc3) + softScore(sc3, sky);
@@ -470,6 +509,7 @@ prisma.user
       for (var yi = 0; yi < yehiaPool.length; yi++) {
         var yc = yehiaPool[yi];
         if (yc.id === yehia.id || used[yc.id]) continue;
+        if (_previouslyMatched[yehia.id + ":" + yc.id]) continue;
         if (!pairEligible(yehia, yc)) continue;
         var yS = softScore(yehia, yc) + softScore(yc, yehia);
         var yO = overlap(yehia.interests || [], yc.interests || []);
@@ -527,6 +567,7 @@ prisma.user
           var a = unmatchedBucket[i];
           var b = suspectBucket[j];
           if (used[a.id] || used[b.id]) continue;
+          if (_previouslyMatched[a.id + ":" + b.id]) continue;
           if (!pairEligible(a, b)) continue;
           var s = softScore(a, b) + softScore(b, a);
           var io = overlap(a.interests || [], b.interests || []);
@@ -599,6 +640,15 @@ prisma.user
     );
     lines.push(
       "- **Yehia:** whitelisted email (`liveconcordia.onmicrosoft.com`); pinned to best-scoring partner in his bucket.",
+    );
+    lines.push(
+      "- **No repeats:** pairs that were matched in any previous week are excluded.",
+    );
+    lines.push(
+      "- **Never-matched priority:** users who had no match in any prior week are prioritized in greedy ordering.",
+    );
+    lines.push(
+      "- **History:** " + allHistory.length + " historical match(es) loaded; " + Object.keys(previouslyMatched).length / 2 + " unique pairs blocked.",
     );
     lines.push("");
     for (var n = 0; n < notes.length; n++) lines.push("- " + notes[n]);

@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -11,28 +12,29 @@ function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
+type Step = "email" | "code" | "password";
+
 export default function ForgotPasswordPage() {
+  const router = useRouter();
+  const [step, setStep] = useState<Step>("email");
+
   const [email, setEmail] = useState("");
-  const [emailError, setEmailError] = useState("");
+  const [phoneLast4, setPhoneLast4] = useState("");
+  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [fieldError, setFieldError] = useState("");
   const [formError, setFormError] = useState("");
-  const [doneMessage, setDoneMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleEmailSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setEmailError("");
+    setFieldError("");
     setFormError("");
-    setDoneMessage("");
 
     const trimmed = email.trim();
-    if (!trimmed) {
-      setEmailError("Email is required");
-      return;
-    }
-    if (!isValidEmail(trimmed)) {
-      setEmailError("Please enter a valid email address");
-      return;
-    }
+    if (!trimmed) { setFieldError("Email is required"); return; }
+    if (!isValidEmail(trimmed)) { setFieldError("Please enter a valid email address"); return; }
 
     setIsSubmitting(true);
     try {
@@ -48,18 +50,78 @@ export default function ForgotPasswordPage() {
         return;
       }
 
-      setDoneMessage(
-        typeof data.message === "string"
-          ? data.message
-          : "If an account exists for that email, you’ll get a link to reset your password shortly.",
-      );
-      setEmail("");
+      if (data.phoneLast4) {
+        setPhoneLast4(data.phoneLast4);
+        setStep("code");
+      } else {
+        setFormError("No verified phone number found for this account.");
+      }
     } catch {
       setFormError("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   }
+
+  async function handleCodeSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setFieldError("");
+    setFormError("");
+
+    if (!code || !/^\d{6}$/.test(code.trim())) {
+      setFieldError("Enter a valid 6-digit code");
+      return;
+    }
+
+    setStep("password");
+  }
+
+  async function handlePasswordSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setFieldError("");
+    setFormError("");
+
+    if (password.length < 8) {
+      setFieldError("Password must be at least 8 characters");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          code: code.trim(),
+          password,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (typeof data.error === "string" && data.error.toLowerCase().includes("code")) {
+          setStep("code");
+          setCode("");
+        }
+        setFormError(typeof data.error === "string" ? data.error : "Something went wrong");
+        return;
+      }
+
+      router.push("/login?reset=success");
+    } catch {
+      setFormError("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  const subtitle =
+    step === "email"
+      ? "Enter your email and we\u2019ll text a code to your verified phone."
+      : step === "code"
+        ? `We sent a 6-digit code to your phone ending in ${phoneLast4}.`
+        : "Choose a new password.";
 
   return (
     <div
@@ -73,23 +135,14 @@ export default function ForgotPasswordPage() {
 
         <div className="w-full rounded-2xl bg-white p-8 sm:p-10 shadow-card border border-border-light/60">
           <div className="mb-9 text-center">
-            <h1 className="font-display text-2xl text-charcoal">Forgot password</h1>
-            <p className="mt-2.5 text-sm text-text-secondary">
-              We&rsquo;ll email you a link to choose a new one.
-            </p>
+            <h1 className="font-display text-2xl text-charcoal">
+              {step === "password" ? "Set a new password" : "Forgot password"}
+            </h1>
+            <p className="mt-2.5 text-sm text-text-secondary">{subtitle}</p>
           </div>
 
-          {doneMessage ? (
-            <div className="space-y-6">
-              <p className="text-sm text-text-secondary leading-relaxed" role="status">
-                {doneMessage}
-              </p>
-              <Button variant="secondary" size="lg" className="w-full" href="/login">
-                Back to sign in
-              </Button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+          {step === "email" && (
+            <form onSubmit={handleEmailSubmit} className="space-y-5" noValidate>
               <Input
                 label="Email"
                 type="email"
@@ -97,29 +150,81 @@ export default function ForgotPasswordPage() {
                 autoComplete="email"
                 placeholder="you@mail.mcgill.ca"
                 value={email}
-                error={emailError}
+                error={fieldError}
                 onChange={(e) => {
                   setEmail(e.target.value);
-                  if (emailError) setEmailError("");
+                  if (fieldError) setFieldError("");
                   if (formError) setFormError("");
                 }}
                 disabled={isSubmitting}
               />
+              {formError && (
+                <p className="text-[13px] text-error" role="alert">{formError}</p>
+              )}
+              <Button type="submit" variant="primary" size="lg" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Sending\u2026" : "Send code"}
+              </Button>
+            </form>
+          )}
 
-              {formError ? (
-                <p className="text-[13px] text-error" role="alert">
-                  {formError}
-                </p>
-              ) : null}
-
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                className="w-full"
+          {step === "code" && (
+            <form onSubmit={handleCodeSubmit} className="space-y-5" noValidate>
+              <Input
+                label="6-digit code"
+                type="text"
+                name="code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="000000"
+                maxLength={6}
+                value={code}
+                error={fieldError}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+                  setCode(v);
+                  if (fieldError) setFieldError("");
+                  if (formError) setFormError("");
+                }}
                 disabled={isSubmitting}
+              />
+              {formError && (
+                <p className="text-[13px] text-error" role="alert">{formError}</p>
+              )}
+              <Button type="submit" variant="primary" size="lg" className="w-full" disabled={isSubmitting}>
+                Verify code
+              </Button>
+              <button
+                type="button"
+                className="w-full text-sm text-text-tertiary hover:text-sage transition-colors"
+                onClick={() => { setStep("email"); setCode(""); setFormError(""); setFieldError(""); }}
               >
-                {isSubmitting ? "Sending\u2026" : "Send reset link"}
+                Didn&rsquo;t get it? Go back
+              </button>
+            </form>
+          )}
+
+          {step === "password" && (
+            <form onSubmit={handlePasswordSubmit} className="space-y-5" noValidate>
+              <Input
+                label="New password"
+                type="password"
+                name="password"
+                autoComplete="new-password"
+                placeholder="At least 8 characters"
+                value={password}
+                error={fieldError}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (fieldError) setFieldError("");
+                  if (formError) setFormError("");
+                }}
+                disabled={isSubmitting}
+              />
+              {formError && (
+                <p className="text-[13px] text-error" role="alert">{formError}</p>
+              )}
+              <Button type="submit" variant="primary" size="lg" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Saving\u2026" : "Save new password"}
               </Button>
             </form>
           )}
