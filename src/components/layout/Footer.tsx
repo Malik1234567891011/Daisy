@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { SITE_NAME, FOOTER } from "@/lib/constants";
@@ -30,6 +34,57 @@ function FooterColumn({ heading, links }: FooterColumnProps) {
   );
 }
 
+function DeleteAccountLink() {
+  const [confirm, setConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/user/delete", { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      await signOut({ callbackUrl: "/" });
+    } catch {
+      setDeleting(false);
+      setConfirm(false);
+    }
+  }
+
+  if (!confirm) {
+    return (
+      <button
+        type="button"
+        onClick={() => setConfirm(true)}
+        className="text-xs text-text-tertiary hover:text-error transition-colors"
+      >
+        Delete account
+      </button>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="text-xs text-error">Delete?</span>
+      <button
+        type="button"
+        disabled={deleting}
+        onClick={handleDelete}
+        className="text-xs text-error font-medium underline underline-offset-2 disabled:opacity-50"
+      >
+        {deleting ? "Deleting…" : "Yes"}
+      </button>
+      <button
+        type="button"
+        disabled={deleting}
+        onClick={() => setConfirm(false)}
+        className="text-xs text-text-tertiary hover:text-charcoal"
+      >
+        No
+      </button>
+    </span>
+  );
+}
+
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
@@ -59,6 +114,8 @@ export default function Footer() {
         <div className="section-container flex items-center justify-center py-7">
           <p className="text-xs text-text-tertiary tracking-wide">
             &copy; {currentYear} {SITE_NAME}. All rights reserved.
+            <span className="mx-1.5">&middot;</span>
+            <DeleteAccountLink />
           </p>
         </div>
       </div>
