@@ -43,6 +43,13 @@ export async function POST() {
     const baseUrl = getAppBaseUrl();
 
     let customerId = user.stripeCustomerId;
+    if (customerId) {
+      try {
+        await stripe.customers.retrieve(customerId);
+      } catch {
+        customerId = null;
+      }
+    }
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email,
