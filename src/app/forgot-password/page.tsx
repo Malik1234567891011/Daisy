@@ -19,7 +19,6 @@ export default function ForgotPasswordPage() {
   const [step, setStep] = useState<Step>("email");
 
   const [email, setEmail] = useState("");
-  const [phoneLast4, setPhoneLast4] = useState("");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
 
@@ -50,12 +49,7 @@ export default function ForgotPasswordPage() {
         return;
       }
 
-      if (data.phoneLast4) {
-        setPhoneLast4(data.phoneLast4);
-        setStep("code");
-      } else {
-        setFormError("No verified phone number found for this account.");
-      }
+      setStep("code");
     } catch {
       setFormError("Something went wrong. Please try again.");
     } finally {
@@ -120,7 +114,7 @@ export default function ForgotPasswordPage() {
     step === "email"
       ? "Enter your email and we\u2019ll text a code to your verified phone."
       : step === "code"
-        ? `We sent a 6-digit code to your phone ending in ${phoneLast4}.`
+        ? "Enter the 6-digit code we just sent."
         : "Choose a new password.";
 
   return (
