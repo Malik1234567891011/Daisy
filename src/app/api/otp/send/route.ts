@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID!,
@@ -34,6 +35,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Enter a valid phone number with country code (e.g. +15141234567)" },
         { status: 400 },
+      );
+    }
+
+    const perUser = await checkRateLimit({
+      keyPrefix: "otp-send-user",
+      identifier: session.user.id,
+      limit: 3,
+      window: "15 m",
+    });
+    if (perUser.limited) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 },
+      );
+    }
+
+    const perPhone = await checkRateLimit({
+      keyPrefix: "otp-send-phone",
+      identifier: normalized,
+      limit: 3,
+      window: "15 m",
+    });
+    if (perPhone.limited) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 },
       );
     }
 

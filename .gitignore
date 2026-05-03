@@ -49,3 +49,9 @@ next-env.d.ts
 
 # local admin dashboard
 admin-dashboard.html
+
+# sensitive/generated match outputs
+/matches.md
+/matches-*.md
+/generated-matches*.md
+/match-exports/

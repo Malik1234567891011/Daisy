@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID!,
@@ -16,6 +17,19 @@ export async function POST(req: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const perUser = await checkRateLimit({
+      keyPrefix: "otp-verify-user",
+      identifier: session.user.id,
+      limit: 10,
+      window: "15 m",
+    });
+    if (perUser.limited) {
+      return NextResponse.json(
+        { error: "Too many attempts. Please try again later." },
+        { status: 429 },
+      );
     }
 
     const { phone, code } = await req.json();

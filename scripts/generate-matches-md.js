@@ -70,15 +70,41 @@ var EXCLUDE_FIRST_NAMES = ["dawson", "kamil", "vincent", "malik"];
 /** Specific emails to force-include even if domain looks suspect */
 var WHITELISTED_EMAILS = [
   "y_zahe@liveconcordia.onmicrosoft.com", // Yehia — Concordia Microsoft 365 backend domain
+  "ayushassi365@gmail.comr", // Ayush — typo in domain, real user at JAC
+  "maddie.raposo@dawson.qc.ca",
+  "2432482@marianopolis.com",
+  "adam.msefer@stgeoges.qc.ca",
+  "2531494@marianopolis.com",
+  "jcgibanez@etu.uqac.ca",
+  "alex.33@videotron.ca",
+  "julietahcasanova@gmail.con",
+  "6304900@vaniercollege.qc.ca",
+  "j_agulni@live.concordia.com",
+  "pitmanbrett25@mcgill.com",
+  "jacob.kingi@mila.quebec",
+  "672252@vaniercollege.com",
+  "2530090@marianopolis.com",
+  "i_velezf@live.concordia.com",
+  "pe_zahr@concordia.ca.edu",
+  "ai_segal@concordia.live.ca",
+  "houssamlebal@dawson.com",
+  "47772@vanier.com",
 ];
 
 /** Match last: greedy processes edges without these before any edge involving them */
 var DEPRIORITIZE_FIRST_NAMES = [];
+var _now = new Date();
 
 function normName(s) {
   return String(s || "")
     .trim()
     .toLowerCase();
+}
+
+function isPlusActiveUser(u) {
+  if (!u || u.subscriptionTier !== "PLUS") return false;
+  if (!u.stripeCurrentPeriodEnd) return true;
+  return new Date(u.stripeCurrentPeriodEnd).getTime() > _now.getTime();
 }
 
 function isSuspectEmail(email) {
@@ -164,6 +190,13 @@ function findYehia(users) {
   return null;
 }
 
+function findAyush(users) {
+  for (var i = 0; i < users.length; i++) {
+    if (normName(users[i].firstName) === "ayush") return users[i];
+  }
+  return null;
+}
+
 function isWomanSeekingWomen(u) {
   return (
     u.gender === "Woman" &&
@@ -215,6 +248,15 @@ function pairEligible(a, b) {
   if (!schoolOk(b.schoolPreference, b.school, a.school)) return false;
   if (!ethnicityOk(a.ethnicityPreference, b.ethnicity)) return false;
   if (!ethnicityOk(b.ethnicityPreference, a.ethnicity)) return false;
+  return true;
+}
+
+/** Relaxed fallback: keep only bilateral gender + age compatibility. */
+function pairEligibleRelaxed(a, b) {
+  if (!genderCompatible(a.genderPreference, b.gender)) return false;
+  if (!genderCompatible(b.genderPreference, a.gender)) return false;
+  if (!ageInRange(a.age, b.ageRangeMin, b.ageRangeMax)) return false;
+  if (!ageInRange(b.age, a.ageRangeMin, a.ageRangeMax)) return false;
   return true;
 }
 
@@ -307,6 +349,10 @@ function esc(s) {
 
 var prisma = new PrismaClient();
 
+var nowLocal = new Date();
+var localDayStart = new Date(nowLocal);
+localDayStart.setHours(0, 0, 0, 0);
+
 prisma.user
   .findMany({
     where: {
@@ -335,6 +381,8 @@ prisma.user
       ethnicityPreference: true,
       photoUrl: true,
       referralCode: true,
+      subscriptionTier: true,
+      stripeCurrentPeriodEnd: true,
       createdAt: true,
     },
     orderBy: { createdAt: "asc" },
@@ -342,7 +390,10 @@ prisma.user
   .then(function (users) {
     return Promise.all([
       prisma.match.findMany({
-        where: { status: { in: ["PENDING", "MUTUAL"] } },
+        where: {
+          status: { in: ["PENDING", "MUTUAL"] },
+          dropDate: { gte: localDayStart },
+        },
         select: { userAId: true, userBId: true },
       }),
       prisma.match.findMany({
@@ -531,6 +582,36 @@ prisma.user
       notes.push("No user named **Yehia** in eligible pool.");
     }
 
+    /* Priority: ensure Ayush gets a match */
+    var ayush = findAyush(eligible);
+    if (ayush && !used[ayush.id]) {
+      var ayushPool = ayush.photoUrl ? withPhoto : noPhoto;
+      var ayushBest = null;
+      for (var ai = 0; ai < ayushPool.length; ai++) {
+        var ac = ayushPool[ai];
+        if (ac.id === ayush.id || used[ac.id]) continue;
+        if (_previouslyMatched[ayush.id + ":" + ac.id]) continue;
+        if (!pairEligible(ayush, ac)) continue;
+        var aS = softScore(ayush, ac) + softScore(ac, ayush);
+        var aO = overlap(ayush.interests || [], ac.interests || []);
+        if (!ayushBest || aS > ayushBest.score || (aS === ayushBest.score && aO > ayushBest.interestOverlap)) {
+          ayushBest = { a: ayush, b: ac, score: aS, interestOverlap: aO, pinNote: "Ayush pin" };
+        }
+      }
+      if (ayushBest) {
+        used[ayushBest.a.id] = true;
+        used[ayushBest.b.id] = true;
+        pairs.push(ayushBest);
+        notes.push(
+          "Pinned **Ayush** with **" + (ayushBest.b.firstName || "?") + "** (best score in bucket).",
+        );
+      } else {
+        notes.push("Could not pin Ayush — no eligible partner in his bucket.");
+      }
+    } else if (!ayush) {
+      notes.push("No user named **Ayush** in eligible pool.");
+    }
+
     var edgesPhoto = buildEdges(withPhoto);
     var edgesNoPhoto = buildEdges(noPhoto);
 
@@ -611,6 +692,143 @@ prisma.user
       return !used[u.id];
     });
 
+    /* Relaxed fallback pass: reduce unmatched by relaxing school/ethnicity/major prefs.
+       Still enforces: no repeats, no cross photo buckets, bilateral gender + age. */
+    var relaxedPairs = [];
+    function relaxedGreedy(unmatchedBucket) {
+      var edges = [];
+      for (var i = 0; i < unmatchedBucket.length; i++) {
+        for (var j = i + 1; j < unmatchedBucket.length; j++) {
+          var a = unmatchedBucket[i];
+          var b = unmatchedBucket[j];
+          if (used[a.id] || used[b.id]) continue;
+          if (_previouslyMatched[a.id + ":" + b.id]) continue;
+          if (!pairEligibleRelaxed(a, b)) continue;
+          var s = softScore(a, b) + softScore(b, a);
+          var io = overlap(a.interests || [], b.interests || []);
+          edges.push({
+            a: a,
+            b: b,
+            score: s,
+            interestOverlap: io,
+            pinNote: "relaxed fallback (gender+age only)",
+          });
+        }
+      }
+      edges.sort(function (x, y) {
+        if (y.score !== x.score) return y.score - x.score;
+        if (y.interestOverlap !== x.interestOverlap) return y.interestOverlap - x.interestOverlap;
+        return 0;
+      });
+      for (var e = 0; e < edges.length; e++) {
+        var ed = edges[e];
+        if (used[ed.a.id] || used[ed.b.id]) continue;
+        used[ed.a.id] = true;
+        used[ed.b.id] = true;
+        pairs.push(ed);
+        relaxedPairs.push(ed);
+      }
+    }
+
+    var unmatchedWithPhoto2 = unmatched.filter(function (u) { return !!u.photoUrl; });
+    var unmatchedNoPhoto2 = unmatched.filter(function (u) { return !u.photoUrl; });
+    relaxedGreedy(unmatchedWithPhoto2);
+    relaxedGreedy(unmatchedNoPhoto2);
+
+    if (relaxedPairs.length > 0) {
+      notes.push("**Relaxed fallback pass:** matched " + relaxedPairs.length + " additional pair(s) with gender+age-only hard filters.");
+    } else {
+      notes.push("**Relaxed fallback pass:** no additional pairs found.");
+    }
+
+    // Final unmatched after all passes
+    unmatched = poolAll.filter(function (u) {
+      return !used[u.id];
+    });
+
+    // Plus rounds: Friday + Sunday (staggered, one-at-a-time delivery)
+    function markPairAsUsedHistorically(aId, bId) {
+      _previouslyMatched[aId + ":" + bId] = true;
+      _previouslyMatched[bId + ":" + aId] = true;
+    }
+
+    function runPlusRound(slotLabel) {
+      var plusPool = eligible.filter(function (u) {
+        return isPlusActiveUser(u);
+      });
+      var plusWithPhoto = plusPool.filter(function (u) { return !!u.photoUrl; });
+      var plusNoPhoto = plusPool.filter(function (u) { return !u.photoUrl; });
+      var usedRound = {};
+      var roundPairs = [];
+
+      var e1 = buildEdges(plusWithPhoto);
+      var r1p = greedyMatch(e1, usedRound, roundPairs);
+      usedRound = r1p.used;
+      roundPairs = r1p.pairs;
+
+      var e2 = buildEdges(plusNoPhoto);
+      var r2p = greedyMatch(e2, usedRound, roundPairs);
+      usedRound = r2p.used;
+      roundPairs = r2p.pairs;
+
+      // relaxed fallback inside plus-only round
+      var remainingPlus = plusPool.filter(function (u) { return !usedRound[u.id]; });
+      function relaxedPlusGreedy(bucket) {
+        var edges = [];
+        for (var i = 0; i < bucket.length; i++) {
+          for (var j = i + 1; j < bucket.length; j++) {
+            var a = bucket[i];
+            var b = bucket[j];
+            if (usedRound[a.id] || usedRound[b.id]) continue;
+            if (_previouslyMatched[a.id + ":" + b.id]) continue;
+            if (!pairEligibleRelaxed(a, b)) continue;
+            var s = softScore(a, b) + softScore(b, a);
+            var io = overlap(a.interests || [], b.interests || []);
+            edges.push({
+              a: a,
+              b: b,
+              score: s,
+              interestOverlap: io,
+              pinNote: "plus " + slotLabel.toLowerCase() + " (relaxed)",
+              dropSlot: slotLabel,
+            });
+          }
+        }
+        edges.sort(function (x, y) {
+          if (y.score !== x.score) return y.score - x.score;
+          if (y.interestOverlap !== x.interestOverlap) return y.interestOverlap - x.interestOverlap;
+          return 0;
+        });
+        for (var e = 0; e < edges.length; e++) {
+          var ed = edges[e];
+          if (usedRound[ed.a.id] || usedRound[ed.b.id]) continue;
+          usedRound[ed.a.id] = true;
+          usedRound[ed.b.id] = true;
+          roundPairs.push(ed);
+        }
+      }
+      relaxedPlusGreedy(remainingPlus.filter(function (u) { return !!u.photoUrl; }));
+      relaxedPlusGreedy(remainingPlus.filter(function (u) { return !u.photoUrl; }));
+
+      for (var rp = 0; rp < roundPairs.length; rp++) {
+        if (!roundPairs[rp].dropSlot) {
+          roundPairs[rp].dropSlot = slotLabel;
+          roundPairs[rp].pinNote = "plus " + slotLabel.toLowerCase() + " drop";
+        }
+        markPairAsUsedHistorically(roundPairs[rp].a.id, roundPairs[rp].b.id);
+        pairs.push(roundPairs[rp]);
+      }
+      notes.push("**Plus " + slotLabel + " round:** matched " + roundPairs.length + " additional pair(s).");
+    }
+
+    // Mark Wednesday pairs in run-history guard so Friday/Sunday avoid same-week repeats.
+    for (var wp = 0; wp < pairs.length; wp++) {
+      if (!pairs[wp].dropSlot) pairs[wp].dropSlot = "WED";
+      markPairAsUsedHistorically(pairs[wp].a.id, pairs[wp].b.id);
+    }
+    runPlusRound("FRI");
+    runPlusRound("SUN");
+
     var skippedBusy = users.filter(function (u) {
       return busy[u.id];
     });
@@ -642,7 +860,13 @@ prisma.user
       "- **Yehia:** whitelisted email (`liveconcordia.onmicrosoft.com`); pinned to best-scoring partner in his bucket.",
     );
     lines.push(
+      "- **Ayush:** whitelisted email (`gmail.comr` typo); pinned to best-scoring partner in his bucket.",
+    );
+    lines.push(
       "- **No repeats:** pairs that were matched in any previous week are excluded.",
+    );
+    lines.push(
+      "- **Daisy Plus delivery:** free users get Wednesday only; Plus users can receive additional curated drops on **Friday** and **Sunday**.",
     );
     lines.push(
       "- **Never-matched priority:** users who had no match in any prior week are prioritized in greedy ordering.",
@@ -669,8 +893,8 @@ prisma.user
       lines.push("_No eligible pairs in the current pool._");
       lines.push("");
     } else {
-      lines.push("| # | Person A | Person B | Score | Shared interests | Note |");
-      lines.push("|---|----------|----------|-------|------------------|------|");
+      lines.push("| # | Person A | Person B | Drop | Score | Shared interests | Note |");
+      lines.push("|---|----------|----------|------|-------|------------------|------|");
       for (var p = 0; p < pairs.length; p++) {
         var pr = pairs[p];
         var an = pr.a.firstName || "?";
@@ -699,6 +923,8 @@ prisma.user
             (pr.b.age != null ? pr.b.age : "?") +
             (pr.b.photoUrl ? "" : ", no photo") +
             ") | " +
+            (pr.dropSlot || "WED") +
+            " | " +
             pr.score +
             " | " +
             shared +
@@ -722,6 +948,7 @@ prisma.user
             (pr2.pinNote ? " _(" + pr2.pinNote + ")_" : pr2.pinned ? " _(pinned)_" : ""),
         );
         lines.push("");
+        lines.push("- **Drop slot:** " + (pr2.dropSlot || "WED"));
         lines.push("- **Score:** " + pr2.score);
         lines.push(
           "- **A:** " +

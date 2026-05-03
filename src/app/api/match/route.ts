@@ -15,6 +15,7 @@ export async function GET() {
       where: {
         OR: [{ userAId: userId }, { userBId: userId }],
         status: { in: ["PENDING", "MUTUAL"] },
+        dropDate: { lte: new Date() },
       },
       orderBy: { dropDate: "desc" },
       include: {

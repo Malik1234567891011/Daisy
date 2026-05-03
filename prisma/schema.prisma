@@ -58,6 +58,14 @@ model User {
   passwordResetTokenHash String?   @unique
   passwordResetExpires DateTime?
 
+  // Billing
+  subscriptionTier      SubscriptionTier @default(FREE)
+  stripeCustomerId      String?          @unique
+  stripeSubscriptionId  String?          @unique
+  stripePriceId         String?
+  stripeCurrentPeriodEnd DateTime?
+  stripeCancelAtPeriodEnd Boolean        @default(false)
+
   // Match relations
   matchesAsA Match[] @relation("matchUserA")
   matchesAsB Match[] @relation("matchUserB")
@@ -108,6 +116,11 @@ enum MatchStatus {
   MUTUAL
   EXPIRED
   DECLINED
+}
+
+enum SubscriptionTier {
+  FREE
+  PLUS
 }
 
 /// Prevents the Wednesday SMS cron from texting the same week twice (e.g. retries).

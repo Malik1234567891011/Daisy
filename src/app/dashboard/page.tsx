@@ -25,6 +25,10 @@ type UserData = {
   school: string | null;
   referralCode: string | null;
   referralCount: number;
+  subscriptionTier: "FREE" | "PLUS";
+  stripeCurrentPeriodEnd: string | null;
+  stripeCancelAtPeriodEnd: boolean;
+  plusActive: boolean;
   phoneVerified: boolean;
   onboardingComplete: boolean;
   photoUrl: string | null;
@@ -143,6 +147,116 @@ function PulsingDot() {
       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sage opacity-40" />
       <span className="relative inline-flex h-2 w-2 rounded-full bg-sage" />
     </span>
+  );
+}
+
+function DaisyPlusCard({ user }: { user: UserData | null }) {
+  const [loading, setLoading] = useState<"checkout" | "portal" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function goToCheckout() {
+    setError(null);
+    setLoading("checkout");
+    try {
+      const res = await fetch("/api/billing/checkout", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data?.url) throw new Error(data?.error || "Could not start checkout");
+      window.location.href = data.url;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not start checkout");
+      setLoading(null);
+    }
+  }
+
+  async function goToPortal() {
+    setError(null);
+    setLoading("portal");
+    try {
+      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data?.url) throw new Error(data?.error || "Could not open billing portal");
+      window.location.href = data.url;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not open billing portal");
+      setLoading(null);
+    }
+  }
+
+  const isPlus = !!user?.plusActive;
+  const nextPlusDropLabel = (() => {
+    const now = new Date();
+    const day = now.getDay(); // 0 Sun ... 6 Sat
+    const hour = now.getHours();
+    if (day < 3 || (day === 3 && hour < 18)) return "Wednesday";
+    if (day < 5 || (day === 5 && hour < 18)) return "Friday";
+    if (day === 0 && hour >= 18) return "Next Wednesday";
+    if (day === 6 || (day === 0 && hour < 18)) return "Sunday";
+    return "Next Wednesday";
+  })();
+  const periodEnd = user?.stripeCurrentPeriodEnd
+    ? new Date(user.stripeCurrentPeriodEnd).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : null;
+
+  return (
+    <Card className="mb-6 border border-sage-light/40 bg-sage-pale/30">
+      <div className="flex items-start gap-4">
+        <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-sage-pale/60 border border-sage-light/40">
+          <Sparkles className="w-5 h-5 text-sage" strokeWidth={1.6} />
+        </div>
+        <div className="flex-1">
+          <div className="inline-flex items-center rounded-full border border-sage-light/40 bg-white/70 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wider text-sage mb-2">
+            Daisy Plus
+          </div>
+          <h2 className="font-display text-lg text-charcoal mb-1">
+            {isPlus ? "Daisy Plus active" : "Want more chances this week?"}
+          </h2>
+          <p className="text-sm text-text-secondary leading-relaxed">
+            {isPlus
+              ? "You'll receive 3 curated matches this week."
+              : "Daisy Plus gives you 3 curated matches every Wednesday instead of 1."}
+          </p>
+          {isPlus && (
+            <p className="text-sm text-charcoal mt-1">
+              Next Plus match: <span className="font-medium">{nextPlusDropLabel}</span>
+            </p>
+          )}
+          <p className="text-xs text-text-tertiary mt-2">
+            {isPlus
+              ? `Plan: $8.99/month${periodEnd ? ` · Renews ${periodEnd}` : ""}`
+              : "$8.99/month · cancel anytime"}
+          </p>
+
+          <div className="mt-4">
+            {isPlus ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={loading !== null}
+                onClick={goToPortal}
+              >
+                {loading === "portal" ? "Opening…" : "Manage billing"}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                disabled={loading !== null}
+                onClick={goToCheckout}
+              >
+                {loading === "checkout" ? "Redirecting…" : "Upgrade to Daisy Plus"}
+              </Button>
+            )}
+          </div>
+
+          {error && <p className="text-xs text-error mt-2">{error}</p>}
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -304,6 +418,8 @@ function WaitlistDashboard({
           </div>
         </div>
       </Card>
+
+      <DaisyPlusCard user={user} />
 
       {/* Profile photo */}
       <Card className="mb-6">

@@ -12,6 +12,8 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
     "@prisma/client": "^6.19.2",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.37.0",
     "@vercel/blob": "^2.3.1",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
@@ -20,6 +22,7 @@
     "next-auth": "^5.0.0-beta.30",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "stripe": "^22.1.0",
     "twilio": "^5.13.1"
   },
   "devDependencies": {

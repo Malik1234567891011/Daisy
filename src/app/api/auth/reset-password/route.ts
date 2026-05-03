@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { checkRateLimit, getRequestIp } from "@/lib/rate-limit";
 
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID!,
   process.env.TWILIO_AUTH_TOKEN!,
 );
 const VERIFY_SID = process.env.TWILIO_VERIFY_SERVICE_SID!;
+const GENERIC_MESSAGE = "If an account exists and is eligible, instructions were applied.";
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,16 +31,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const perEmail = await checkRateLimit({
+      keyPrefix: "reset-email",
+      identifier: email,
+      limit: 10,
+      window: "1 h",
+    });
+    if (perEmail.limited) {
+      return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });
+    }
+
+    const perIp = await checkRateLimit({
+      keyPrefix: "reset-ip",
+      identifier: getRequestIp(req),
+      limit: 30,
+      window: "1 h",
+    });
+    if (perIp.limited) {
+      return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });
+    }
+
     const user = await prisma.user.findUnique({
       where: { email },
       select: { id: true, phoneNumber: true, phoneVerified: true },
     });
 
     if (!user || !user.phoneNumber || !user.phoneVerified) {
-      return NextResponse.json(
-        { error: "No verified account found for that email." },
-        { status: 400 },
-      );
+      return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });
     }
 
     const check = await client.verify.v2
@@ -46,10 +65,7 @@ export async function POST(req: NextRequest) {
       .verificationChecks.create({ to: user.phoneNumber, code });
 
     if (check.status !== "approved") {
-      return NextResponse.json(
-        { error: "Invalid or expired code. Please try again." },
-        { status: 400 },
-      );
+      return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
@@ -63,12 +79,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error("reset-password error:", err);
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 },
-    );
+    return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });
+  } catch {
+    console.error("reset-password error");
+    return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });
   }
 }
