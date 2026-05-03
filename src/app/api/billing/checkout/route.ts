@@ -5,7 +5,7 @@ import { getAppBaseUrl } from "@/lib/app-base-url";
 import { getStripe, getStripePriceId } from "@/lib/stripe";
 import { checkRateLimit } from "@/lib/rate-limit";
 
-export async function POST() {
+export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -40,7 +40,8 @@ export async function POST() {
   try {
     const stripe = getStripe();
     const priceId = getStripePriceId();
-    const baseUrl = getAppBaseUrl();
+    const requestOrigin = new URL(req.url).origin;
+    const baseUrl = requestOrigin || getAppBaseUrl();
 
     let customerId = user.stripeCustomerId;
     if (customerId) {
