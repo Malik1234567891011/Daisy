@@ -8,7 +8,7 @@ export function getStripe(): Stripe {
     throw new Error("Missing STRIPE_SECRET_KEY");
   }
   if (!_stripe) {
-    _stripe = new Stripe(key, { apiVersion: "2025-03-31.basil" });
+    _stripe = new Stripe(key, { apiVersion: "2026-04-22.dahlia" });
   }
   return _stripe;
 }
