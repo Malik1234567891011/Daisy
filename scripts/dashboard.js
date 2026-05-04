@@ -86,6 +86,7 @@ function buildPage(users) {
 
   var clientUsers = users.map(function(u){
     return {
+      id:u.id,
       n:u.firstName||"",e:u.email||"",s:u.school||"",a:u.age||0,
       g:u.gender||"",gp:u.genderPreference||"",pv:u.phoneVerified,
       pn:u.phoneNumber||"",oc:u.onboardingComplete,ph:u.photoUrl||"",
@@ -203,6 +204,7 @@ function buildPage(users) {
   html += '.arw{position:absolute;top:50%;transform:translateY(-50%);font-size:28px;color:#fff;background:rgba(0,0,0,.35);border:none;cursor:pointer;z-index:10;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center}.arw:hover{background:rgba(0,0,0,.6)}';
   html += '.arw.l{left:10px}.arw.r{right:10px}';
   html += '.startbtn{margin-bottom:16px;padding:10px 24px;border-radius:10px;border:1px solid #a3b899;background:#f0f5ed;color:#2c2c2c;font-size:15px;font-weight:600;cursor:pointer}';
+  html += '.dangerbtn{margin-top:12px;width:100%;padding:10px 12px;border-radius:10px;border:1px solid #ef4444;background:#fee2e2;color:#991b1b;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s}.dangerbtn:hover{background:#fecaca}.dangerbtn:disabled{opacity:.7;cursor:not-allowed}';
   html += '</style></head><body>';
   html += '<div class="hdr"><h1>Daisy Admin Dashboard</h1><button class="rbtn" onclick="location.reload()">Refresh Data</button></div>';
   html += '<p class="sub">Generated ' + new Date().toLocaleString() + '</p>';
@@ -223,11 +225,12 @@ function buildPage(users) {
   html += 'h+="<div><div class=il>Phone<\\/div><div class=iv>"+(u.pv?"\\u2713 "+u.pn:"\\u2717 no")+"<\\/div><\\/div>";';
   html += 'h+="<div><div class=il>Referral<\\/div><div class=iv>"+u.rc+"<\\/div><\\/div>";';
   html += 'h+="<div><div class=il>Referred By<\\/div><div class=iv>"+rb+"<\\/div><\\/div>";';
-  html += 'h+="<\\/div><div class=mcnt>"+(ci+1)+" \\/ "+U.length+" \\u00b7 "+u.dt+"<\\/div><\\/div>";';
+  html += 'h+="<\\/div><button class=dangerbtn id=delb>Delete user<\\/button><div class=mcnt>"+(ci+1)+" \\/ "+U.length+" \\u00b7 "+u.dt+"<\\/div><\\/div>";';
   html += 'm.innerHTML=h;';
   html += 'document.getElementById("pb").onclick=function(e){e.stopPropagation();show((ci-1+U.length)%U.length)};';
   html += 'document.getElementById("nb").onclick=function(e){e.stopPropagation();show((ci+1)%U.length)};';
   html += 'document.getElementById("xb").onclick=function(e){e.stopPropagation();document.getElementById("overlay").className=""};';
+  html += 'document.getElementById("delb").onclick=function(e){e.stopPropagation();if(!confirm("Delete "+u.n+" ("+u.e+")? This cannot be undone."))return;var b=this;b.disabled=true;b.textContent="Deleting...";fetch("/delete-user",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:u.id})}).then(function(r){if(!r.ok)return r.json().then(function(x){throw new Error(x.error||"Delete failed")});return r.json()}).then(function(){location.reload()}).catch(function(err){alert(err.message||"Failed to delete user");b.disabled=false;b.textContent="Delete user"})};';
   html += 'document.getElementById("overlay").className="on";}';
   html += 'document.getElementById("startBtn").onclick=function(){show(0)};';
   html += 'document.addEventListener("click",function(e){var c=e.target;while(c&&c!==document){if(c.getAttribute&&c.getAttribute("data-i")!==null){show(parseInt(c.getAttribute("data-i")));return}c=c.parentNode}});';
@@ -239,10 +242,49 @@ function buildPage(users) {
 }
 
 var server = http.createServer(function(req, res) {
-  if (req.url !== "/" && req.url !== "/favicon.ico") {
-    res.writeHead(404); res.end(); return;
-  }
   if (req.url === "/favicon.ico") { res.writeHead(204); res.end(); return; }
+
+  if (req.url === "/delete-user" && req.method === "POST") {
+    var body = "";
+    req.on("data", function(chunk) {
+      body += chunk;
+      if (body.length > 1e6) req.socket.destroy();
+    });
+    req.on("end", function() {
+      var payload;
+      try {
+        payload = JSON.parse(body || "{}");
+      } catch (e) {
+        res.writeHead(400, {"Content-Type":"application/json"});
+        res.end(JSON.stringify({error:"Invalid JSON"}));
+        return;
+      }
+
+      if (!payload.id) {
+        res.writeHead(400, {"Content-Type":"application/json"});
+        res.end(JSON.stringify({error:"Missing user id"}));
+        return;
+      }
+
+      var prisma = new PrismaClient();
+      prisma.user.delete({ where: { id: payload.id } }).then(function() {
+        prisma.$disconnect();
+        res.writeHead(200, {"Content-Type":"application/json"});
+        res.end(JSON.stringify({ok:true}));
+      }).catch(function(err) {
+        prisma.$disconnect();
+        res.writeHead(500, {"Content-Type":"application/json"});
+        res.end(JSON.stringify({error:err.message || "Failed to delete user"}));
+      });
+    });
+    return;
+  }
+
+  if (req.url !== "/" || req.method !== "GET") {
+    res.writeHead(404);
+    res.end();
+    return;
+  }
 
   var prisma = new PrismaClient();
   prisma.user.findMany({

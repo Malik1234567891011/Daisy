@@ -150,7 +150,15 @@ function PulsingDot() {
   );
 }
 
-function DaisyPlusCard({ user }: { user: UserData | null }) {
+function DaisyPlusCard({
+  user,
+  context = "waitlist",
+  className,
+}: {
+  user: UserData | null;
+  context?: "waitlist" | "match" | "postMatch";
+  className?: string;
+}) {
   const [loading, setLoading] = useState<"checkout" | "portal" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -200,9 +208,21 @@ function DaisyPlusCard({ user }: { user: UserData | null }) {
         year: "numeric",
       })
     : null;
+  const title = (() => {
+    if (isPlus) return "Daisy Plus active";
+    if (context === "match") return "Want more than one match this week?";
+    if (context === "postMatch") return "Don’t wait all week for one shot";
+    return "Want more chances this week?";
+  })();
+  const body = (() => {
+    if (isPlus) return "You’re in the priority pool with up to 3 curated drops each week (Wednesday, Friday, Sunday).";
+    if (context === "match") return "Most people only see one drop. Daisy Plus gives you up to 3 weekly drops (Wed/Fri/Sun), priority in the pool, and occasional rerolls.";
+    if (context === "postMatch") return "Free gives one weekly drop. Daisy Plus gives up to 3 drops (Wed/Fri/Sun), priority in matching, and occasional rerolls.";
+    return "Daisy Plus gives up to 3 curated weekly drops (Wednesday, Friday, Sunday), priority in the pool, and occasional rerolls.";
+  })();
 
   return (
-    <Card className="mb-6 border border-sage-light/40 bg-sage-pale/30">
+    <Card className={cn("mb-6 border border-sage-light/40 bg-sage-pale/30", className)}>
       <div className="flex items-start gap-4">
         <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-sage-pale/60 border border-sage-light/40">
           <Sparkles className="w-5 h-5 text-sage" strokeWidth={1.6} />
@@ -212,12 +232,10 @@ function DaisyPlusCard({ user }: { user: UserData | null }) {
             Daisy Plus
           </div>
           <h2 className="font-display text-lg text-charcoal mb-1">
-            {isPlus ? "Daisy Plus active" : "Want more chances this week?"}
+            {title}
           </h2>
           <p className="text-sm text-text-secondary leading-relaxed">
-            {isPlus
-              ? "You'll receive 3 curated matches this week."
-              : "Daisy Plus gives you 3 curated matches every Wednesday instead of 1."}
+            {body}
           </p>
           {isPlus && (
             <p className="text-sm text-charcoal mt-1">
@@ -262,9 +280,11 @@ function DaisyPlusCard({ user }: { user: UserData | null }) {
 
 /* ─── Match closed (calm retention, not rejection drama) ─── */
 function MatchClosedDashboard({
+  user,
   youDeclined,
   onBackToDashboard,
 }: {
+  user: UserData | null;
   youDeclined: boolean;
   onBackToDashboard: () => void;
 }) {
@@ -322,6 +342,8 @@ function MatchClosedDashboard({
           </div>
         </div>
       </Card>
+
+      <DaisyPlusCard user={user} context="postMatch" />
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4">
         <Button
@@ -535,10 +557,12 @@ function WaitlistDashboard({
 
 /* ─── Match Dashboard ─── */
 function MatchDashboard({
+  user,
   match,
   onDecision,
   deciding,
 }: {
+  user: UserData | null;
   match: MatchData;
   onDecision: (d: "INTERESTED" | "DECLINED") => void;
   deciding: boolean;
@@ -619,6 +643,8 @@ function MatchDashboard({
           </div>
         )}
       </Card>
+
+      <DaisyPlusCard user={user} context="match" className="max-w-sm mx-auto" />
 
       <p className="max-w-sm mx-auto mt-8 text-center text-xs text-text-tertiary">
         <Link href="/profile#photo" className="font-medium text-sage hover:text-olive underline-offset-4 hover:underline">
@@ -872,9 +898,10 @@ export default function DashboardPage() {
         ) : isMutual ? (
           <MutualDashboard match={match!} />
         ) : hasMatch ? (
-          <MatchDashboard match={match!} onDecision={handleDecision} deciding={deciding} />
+          <MatchDashboard user={user} match={match!} onDecision={handleDecision} deciding={deciding} />
         ) : showMatchClosedCalm ? (
           <MatchClosedDashboard
+            user={user}
             youDeclined={match!.closedMatch!.youDeclined}
             onBackToDashboard={() => setMatchClosedCalmDismissed(true)}
           />
