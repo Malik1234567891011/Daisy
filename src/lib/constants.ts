@@ -165,7 +165,7 @@ export const SEO_CONTENT = {
   whyWeekly: {
     heading: "Why Weekly Matchmaking Works Better Than Swiping",
     paragraphs: [
-      "There's a reason dating apps keep you swiping — it makes them money. Every extra minute you spend on the app is ad revenue or a reason to sell you a premium subscription. They're not optimized for you to find someone. They're optimized for you to keep looking.",
+      "There's a reason dating apps keep you swiping: they are designed to maximize time spent in-app. The longer you stay, the more the system is rewarded. They're not optimized for you to find someone. They're optimized for you to keep looking.",
       "Weekly matchmaking flips that model entirely. When you only get one match per week, you actually pay attention. You read their profile. You think about whether you're interested. You make a real decision instead of an impulse swipe. Research in behavioral psychology consistently shows that fewer, higher-quality options lead to better decision-making and higher satisfaction.",
       "Every Wednesday at 6 PM, Daisy drops your match. You get a text. You see their profile — first name, age, school, a photo, and a few details about what they're into. If you're both interested, we reveal how to connect and suggest a place to meet. If not, no pressure. Next Wednesday, a new match.",
     ],
@@ -183,7 +183,7 @@ export const SEO_CONTENT = {
       },
       {
         subtitle: "Anyone Tired of Swiping Culture",
-        text: "If you've ever deleted a dating app in frustration, Daisy was built for you. No infinite scrolling, no algorithm gaming, no premium paywalls. Just one thoughtful match per week, delivered at the same time, with the same simplicity. The way meeting someone should feel.",
+        text: "If you've ever deleted a dating app in frustration, Daisy was built for you. No infinite scrolling, no algorithm gaming, no endless upsells. Just one thoughtful match per week, delivered at the same time, with the same simplicity. The way meeting someone should feel.",
       },
     ],
   },

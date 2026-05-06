@@ -25,10 +25,6 @@ type UserData = {
   school: string | null;
   referralCode: string | null;
   referralCount: number;
-  subscriptionTier: "FREE" | "PLUS";
-  stripeCurrentPeriodEnd: string | null;
-  stripeCancelAtPeriodEnd: boolean;
-  plusActive: boolean;
   phoneVerified: boolean;
   onboardingComplete: boolean;
   photoUrl: string | null;
@@ -150,141 +146,11 @@ function PulsingDot() {
   );
 }
 
-function DaisyPlusCard({
-  user,
-  context = "waitlist",
-  className,
-}: {
-  user: UserData | null;
-  context?: "waitlist" | "match" | "postMatch";
-  className?: string;
-}) {
-  const [loading, setLoading] = useState<"checkout" | "portal" | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function goToCheckout() {
-    setError(null);
-    setLoading("checkout");
-    try {
-      const res = await fetch("/api/billing/checkout", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok || !data?.url) throw new Error(data?.error || "Could not start checkout");
-      window.location.href = data.url;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not start checkout");
-      setLoading(null);
-    }
-  }
-
-  async function goToPortal() {
-    setError(null);
-    setLoading("portal");
-    try {
-      const res = await fetch("/api/billing/portal", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok || !data?.url) throw new Error(data?.error || "Could not open billing portal");
-      window.location.href = data.url;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not open billing portal");
-      setLoading(null);
-    }
-  }
-
-  const isPlus = !!user?.plusActive;
-  const nextPlusDropLabel = (() => {
-    const now = new Date();
-    const day = now.getDay(); // 0 Sun ... 6 Sat
-    const hour = now.getHours();
-    if (day < 3 || (day === 3 && hour < 18)) return "Wednesday";
-    if (day < 5 || (day === 5 && hour < 18)) return "Friday";
-    if (day === 0 && hour >= 18) return "Next Wednesday";
-    if (day === 6 || (day === 0 && hour < 18)) return "Sunday";
-    return "Next Wednesday";
-  })();
-  const periodEnd = user?.stripeCurrentPeriodEnd
-    ? new Date(user.stripeCurrentPeriodEnd).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    : null;
-  const title = (() => {
-    if (isPlus) return "Daisy Plus active";
-    if (context === "match") return "Want more than one match this week?";
-    if (context === "postMatch") return "Don’t wait all week for one shot";
-    return "Want more chances this week?";
-  })();
-  const body = (() => {
-    if (isPlus) return "You’re in the priority pool with up to 3 curated drops each week (Wednesday, Friday, Sunday).";
-    if (context === "match") return "Most people only see one drop. Daisy Plus gives you up to 3 weekly drops (Wed/Fri/Sun), priority in the pool, and occasional rerolls.";
-    if (context === "postMatch") return "Free gives one weekly drop. Daisy Plus gives up to 3 drops (Wed/Fri/Sun), priority in matching, and occasional rerolls.";
-    return "Daisy Plus gives up to 3 curated weekly drops (Wednesday, Friday, Sunday), priority in the pool, and occasional rerolls.";
-  })();
-
-  return (
-    <Card className={cn("mb-6 border border-sage-light/40 bg-sage-pale/30", className)}>
-      <div className="flex items-start gap-4">
-        <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-sage-pale/60 border border-sage-light/40">
-          <Sparkles className="w-5 h-5 text-sage" strokeWidth={1.6} />
-        </div>
-        <div className="flex-1">
-          <div className="inline-flex items-center rounded-full border border-sage-light/40 bg-white/70 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wider text-sage mb-2">
-            Daisy Plus
-          </div>
-          <h2 className="font-display text-lg text-charcoal mb-1">
-            {title}
-          </h2>
-          <p className="text-sm text-text-secondary leading-relaxed">
-            {body}
-          </p>
-          {isPlus && (
-            <p className="text-sm text-charcoal mt-1">
-              Next Plus match: <span className="font-medium">{nextPlusDropLabel}</span>
-            </p>
-          )}
-          <p className="text-xs text-text-tertiary mt-2">
-            {isPlus
-              ? `Plan: $8.99/month${periodEnd ? ` · Renews ${periodEnd}` : ""}`
-              : "$8.99/month · cancel anytime"}
-          </p>
-
-          <div className="mt-4">
-            {isPlus ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                disabled={loading !== null}
-                onClick={goToPortal}
-              >
-                {loading === "portal" ? "Opening…" : "Manage billing"}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                size="sm"
-                disabled={loading !== null}
-                onClick={goToCheckout}
-              >
-                {loading === "checkout" ? "Redirecting…" : "Upgrade to Daisy Plus"}
-              </Button>
-            )}
-          </div>
-
-          {error && <p className="text-xs text-error mt-2">{error}</p>}
-        </div>
-      </div>
-    </Card>
-  );
-}
-
 /* ─── Match closed (calm retention, not rejection drama) ─── */
 function MatchClosedDashboard({
-  user,
   youDeclined,
   onBackToDashboard,
 }: {
-  user: UserData | null;
   youDeclined: boolean;
   onBackToDashboard: () => void;
 }) {
@@ -342,8 +208,6 @@ function MatchClosedDashboard({
           </div>
         </div>
       </Card>
-
-      <DaisyPlusCard user={user} context="postMatch" />
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4">
         <Button
@@ -440,8 +304,6 @@ function WaitlistDashboard({
           </div>
         </div>
       </Card>
-
-      <DaisyPlusCard user={user} />
 
       {/* Profile photo */}
       <Card className="mb-6">
@@ -557,12 +419,10 @@ function WaitlistDashboard({
 
 /* ─── Match Dashboard ─── */
 function MatchDashboard({
-  user,
   match,
   onDecision,
   deciding,
 }: {
-  user: UserData | null;
   match: MatchData;
   onDecision: (d: "INTERESTED" | "DECLINED") => void;
   deciding: boolean;
@@ -643,8 +503,6 @@ function MatchDashboard({
           </div>
         )}
       </Card>
-
-      <DaisyPlusCard user={user} context="match" className="max-w-sm mx-auto" />
 
       <p className="max-w-sm mx-auto mt-8 text-center text-xs text-text-tertiary">
         <Link href="/profile#photo" className="font-medium text-sage hover:text-olive underline-offset-4 hover:underline">
@@ -898,10 +756,9 @@ export default function DashboardPage() {
         ) : isMutual ? (
           <MutualDashboard match={match!} />
         ) : hasMatch ? (
-          <MatchDashboard user={user} match={match!} onDecision={handleDecision} deciding={deciding} />
+          <MatchDashboard match={match!} onDecision={handleDecision} deciding={deciding} />
         ) : showMatchClosedCalm ? (
           <MatchClosedDashboard
-            user={user}
             youDeclined={match!.closedMatch!.youDeclined}
             onBackToDashboard={() => setMatchClosedCalmDismissed(true)}
           />

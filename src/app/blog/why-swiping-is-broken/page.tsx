@@ -46,19 +46,19 @@ export default function Article() {
                 swiping actually works &mdash; not as a dating tool, but as a business model.
               </p>
 
-              <h2>The Attention Economy of Dating Apps</h2>
+              <h2>The Attention Trap of Dating Apps</h2>
 
               <p>
-                Dating apps make money in two ways: advertising and premium subscriptions. Both
-                require the same thing &mdash; your time and attention. The longer you swipe, the more ads
-                you see, and the more frustrated you become, the more likely you are to pay for
-                features like &ldquo;unlimited likes&rdquo; or &ldquo;see who liked you.&rdquo;
+                Dating apps are built around one core metric: keeping you engaged. The same pattern
+                shows up everywhere &mdash; endless feeds, streaks, nudges, and constant prompts to stay
+                active. The longer you swipe, the less likely you are to step back and make an
+                intentional choice about one real person.
               </p>
 
               <p>
-                This creates a fundamental misalignment. A dating app that quickly matches you with
-                someone great loses a customer. An app that keeps you swiping forever maximizes
-                revenue. The incentive structure is designed to keep you searching, not finding.
+                This creates a fundamental misalignment. An app that gets you off the app quickly is
+                treated as less successful than one that keeps you returning every day. The incentive
+                structure is designed to keep you searching, not finding.
               </p>
 
               <h2>The Paradox of Choice</h2>

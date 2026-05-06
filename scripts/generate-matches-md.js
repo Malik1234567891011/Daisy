@@ -294,7 +294,7 @@ function softScore(a, b) {
 }
 
 var _previouslyMatched = {};
-var _wasMatchedLastWeek = {};
+var _matchedInPreviousWeek = {};
 
 function buildEdges(pool) {
   var edges = [];
@@ -307,8 +307,14 @@ function buildEdges(pool) {
       if (!pairEligible(a, b)) continue;
       var score = softScore(a, b) + softScore(b, a);
       var interestOverlap = overlap(a.interests || [], b.interests || []);
-      var neverMatched = !_wasMatchedLastWeek[a.id] || !_wasMatchedLastWeek[b.id];
-      edges.push({ a: a, b: b, score: score, interestOverlap: interestOverlap, neverMatched: neverMatched });
+      var unmatchedLastWeek = !_matchedInPreviousWeek[a.id] || !_matchedInPreviousWeek[b.id];
+      edges.push({
+        a: a,
+        b: b,
+        score: score,
+        interestOverlap: interestOverlap,
+        unmatchedLastWeek: unmatchedLastWeek,
+      });
     }
   }
   return edges;
@@ -316,8 +322,9 @@ function buildEdges(pool) {
 
 function sortEdgesGreedy(edges) {
   edges.sort(function (x, y) {
-    /* Priority 1: edges involving someone who was never matched go first */
-    if (x.neverMatched !== y.neverMatched) return x.neverMatched ? -1 : 1;
+    /* Priority 1: edges involving someone unmatched in previous week go first */
+    if (x.unmatchedLastWeek !== y.unmatchedLastWeek)
+      return x.unmatchedLastWeek ? -1 : 1;
     /* Priority 2: deprioritized names go last */
     var xd = edgeTouchesDeprio(x);
     var yd = edgeTouchesDeprio(y);
@@ -352,6 +359,8 @@ var prisma = new PrismaClient();
 var nowLocal = new Date();
 var localDayStart = new Date(nowLocal);
 localDayStart.setHours(0, 0, 0, 0);
+var previousWeekStart = new Date(localDayStart);
+previousWeekStart.setDate(previousWeekStart.getDate() - 7);
 
 prisma.user
   .findMany({
@@ -399,11 +408,21 @@ prisma.user
       prisma.match.findMany({
         select: { userAId: true, userBId: true },
       }),
+      prisma.match.findMany({
+        where: {
+          dropDate: {
+            gte: previousWeekStart,
+            lt: localDayStart,
+          },
+        },
+        select: { userAId: true, userBId: true },
+      }),
     ]).then(function (results) {
       return {
         users: users,
         activeMatches: results[0],
         allHistoricalMatches: results[1],
+        previousWeekMatches: results[2],
       };
     });
   })
@@ -411,6 +430,7 @@ prisma.user
     var users = _ref.users;
     var active = _ref.activeMatches;
     var allHistory = _ref.allHistoricalMatches;
+    var previousWeekMatches = _ref.previousWeekMatches;
 
     var busy = {};
     for (var m = 0; m < active.length; m++) {
@@ -427,16 +447,16 @@ prisma.user
       previouslyMatched[keyBA] = true;
     }
 
-    /* Track who was matched in any previous week */
-    var wasMatchedLastWeek = {};
-    for (var am = 0; am < allHistory.length; am++) {
-      wasMatchedLastWeek[allHistory[am].userAId] = true;
-      wasMatchedLastWeek[allHistory[am].userBId] = true;
+    /* Track who was matched during previous week only */
+    var matchedInPreviousWeek = {};
+    for (var am = 0; am < previousWeekMatches.length; am++) {
+      matchedInPreviousWeek[previousWeekMatches[am].userAId] = true;
+      matchedInPreviousWeek[previousWeekMatches[am].userBId] = true;
     }
 
     /* Expose to buildEdges */
     _previouslyMatched = previouslyMatched;
-    _wasMatchedLastWeek = wasMatchedLastWeek;
+    _matchedInPreviousWeek = matchedInPreviousWeek;
 
     var excluded = [];
     var eligible = [];
@@ -869,7 +889,7 @@ prisma.user
       "- **Daisy Plus delivery:** free users get Wednesday only; Plus users can receive additional curated drops on **Friday** and **Sunday**.",
     );
     lines.push(
-      "- **Never-matched priority:** users who had no match in any prior week are prioritized in greedy ordering.",
+      "- **Previous-week unmatched priority:** users who did not get a match in the previous week are prioritized in greedy ordering.",
     );
     lines.push(
       "- **History:** " + allHistory.length + " historical match(es) loaded; " + Object.keys(previouslyMatched).length / 2 + " unique pairs blocked.",

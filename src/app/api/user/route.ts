@@ -39,9 +39,6 @@ export async function GET() {
       referralCode: true,
       onboardingComplete: true,
       createdAt: true,
-      subscriptionTier: true,
-      stripeCurrentPeriodEnd: true,
-      stripeCancelAtPeriodEnd: true,
     },
   });
 
@@ -53,9 +50,5 @@ export async function GET() {
     ? await prisma.user.count({ where: { referredBy: user.referralCode, phoneVerified: true } })
     : 0;
 
-  const plusActive =
-    user.subscriptionTier === "PLUS" &&
-    (!user.stripeCurrentPeriodEnd || user.stripeCurrentPeriodEnd.getTime() > Date.now());
-
-  return NextResponse.json({ ...user, referralCount, plusActive });
+  return NextResponse.json({ ...user, referralCount });
 }
