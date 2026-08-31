@@ -58,13 +58,11 @@ model User {
   passwordResetTokenHash String?   @unique
   passwordResetExpires DateTime?
 
-  // Billing
-  subscriptionTier      SubscriptionTier @default(FREE)
-  stripeCustomerId      String?          @unique
-  stripeSubscriptionId  String?          @unique
-  stripePriceId         String?
-  stripeCurrentPeriodEnd DateTime?
-  stripeCancelAtPeriodEnd Boolean        @default(false)
+  // Billing — pay-per-reroll (no subscription)
+  stripeCustomerId String? @unique
+  rerollCredits    Int     @default(0)
+
+  rerollPurchases RerollPurchase[]
 
   // Match relations
   matchesAsA Match[] @relation("matchUserA")
@@ -86,12 +84,37 @@ model Match {
 
   status MatchStatus @default(PENDING)
 
+  /// Set when a user paid to reroll out of this match.
+  rerolledByUserId String?
+
   suggestedSpotId String?
   suggestedSpot   MeetingSpot? @relation(fields: [suggestedSpotId], references: [id])
 
   @@index([userAId])
   @@index([userBId])
   @@index([dropDate])
+}
+
+/// One paid reroll. Written by the Stripe webhook; keyed on the Checkout
+/// Session so replayed webhooks can never grant a second credit.
+model RerollPurchase {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stripeSessionId String   @unique
+  stripePaymentIntentId String?
+  amountCents     Int
+  currency        String
+
+  /// Match the user was looking at when they bought. Audit only.
+  fromMatchId     String?
+  /// Set when the credit is spent on an actual reroll.
+  consumedAt      DateTime?
+
+  @@index([userId])
 }
 
 model MeetingSpot {
@@ -116,11 +139,7 @@ enum MatchStatus {
   MUTUAL
   EXPIRED
   DECLINED
-}
-
-enum SubscriptionTier {
-  FREE
-  PLUS
+  REROLLED
 }
 
 /// Prevents the Wednesday SMS cron from texting the same week twice (e.g. retries).

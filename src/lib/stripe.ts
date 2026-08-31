@@ -13,10 +13,11 @@ export function getStripe(): Stripe {
   return _stripe;
 }
 
-export function getStripePriceId(): string {
-  const priceId = process.env.STRIPE_PLUS_PRICE_ID;
-  if (!priceId) {
-    throw new Error("Missing STRIPE_PLUS_PRICE_ID");
-  }
-  return priceId;
+/**
+ * Optional. Set STRIPE_REROLL_PRICE_ID to bill against a real Price so
+ * rerolls roll up under one product in Stripe reporting. Leave it unset and
+ * checkout falls back to inline price_data, which needs no dashboard setup.
+ */
+export function getRerollPriceId(): string | null {
+  return process.env.STRIPE_REROLL_PRICE_ID?.trim() || null;
 }

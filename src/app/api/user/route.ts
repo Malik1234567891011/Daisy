@@ -38,6 +38,7 @@ export async function GET() {
       smsConsent: true,
       referralCode: true,
       onboardingComplete: true,
+      rerollCredits: true,
       createdAt: true,
     },
   });

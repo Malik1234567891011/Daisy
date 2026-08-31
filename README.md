@@ -121,7 +121,7 @@ What it does:
 - blocks repeat pairs from historical match table,
 - applies pin logic and greedy scoring,
 - outputs proposed pairs to `../matches.md`,
-- supports staggered Daisy Plus slots in the draft (`WED`, `FRI`, `SUN`) via `Drop slot` metadata,
+- tags every proposed pair with a `Drop slot` of `WED`,
 - **does not write Match rows to DB**.
 
 ### Step B: Seed + broadcast
@@ -166,9 +166,9 @@ Implemented in `scripts/generate-matches-md.js`:
   - users who never had a match are prioritized in edge ordering.
 - Fallback:
   - an extra relaxed pass exists to reduce unmatched users while preserving no-repeat and core compatibility.
-- Daisy Plus cadence:
-  - Free users: one curated Wednesday drop.
-  - Plus users: additional curated drops on Friday and Sunday (staggered, not all-at-once).
+- Cadence:
+  - Everyone gets one curated Wednesday drop.
+  - Extra matches are bought one at a time via paid rerolls, not by tier.
 
 ## Cron and Broadcast
 
@@ -234,10 +234,11 @@ Twilio:
 - `TWILIO_PHONE_NUMBER`
 - `TWILIO_VERIFY_SERVICE_SID`
 
-Stripe billing:
+Stripe billing (pay-per-reroll, $1.99 CAD one-time):
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
-- `STRIPE_PLUS_PRICE_ID` (monthly Daisy Plus price, e.g. $8.99/month)
+- `STRIPE_REROLL_PRICE_ID` (optional — a real Price for cleaner reporting; if
+  unset, checkout builds the line item inline from `REROLL_PRICE_CENTS`)
 
 Broadcast/cron:
 - `CRON_SECRET`
@@ -261,8 +262,9 @@ Other:
 - Seeding and SMS can be run together in one command.
 - Weekly reset logic is now built into seeding to avoid users being stuck on previous week active matches.
 - Duplicate pair protection exists in both generation and seeding layers.
-- Daisy Plus checkout and billing portal are available from the dashboard via Stripe.
-- Stripe webhook endpoint is `POST /api/stripe/webhook` and is required to keep subscription status synced in DB.
+- Paid rerolls: `POST /api/reroll/checkout` opens a $1.99 CAD Stripe Checkout in `payment` mode; `POST /api/reroll` spends the resulting credit, closes the current match as `REROLLED`, and opens a new one via `src/lib/matching.ts`.
+- Stripe webhook endpoint is `POST /api/stripe/webhook` and is required to grant reroll credits. It must be subscribed to `checkout.session.completed` and `checkout.session.async_payment_succeeded`.
+- A paid reroll always becomes a credit first, so a payment is never lost if the match pool is momentarily empty.
 
 ## Analytics
 

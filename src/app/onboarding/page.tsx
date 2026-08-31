@@ -3,8 +3,9 @@
 import { useState, useCallback, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import DaisyLogo from "@/components/layout/DaisyLogo";
-import Button from "@/components/ui/Button";
+import Link from "next/link";
+import AuthShell from "@/components/auth/AuthShell";
+import { AuthPanel } from "@/components/auth/AuthPanel";
 import { ProgressStepper } from "@/components/ui/ProgressStepper";
 import { ONBOARDING_STEPS } from "@/lib/constants";
 import type {
@@ -73,16 +74,26 @@ function OnboardingInner() {
   const [currentStep, setCurrentStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(() => {
     const ref = searchParams.get("ref") ?? undefined;
-    return { ...INITIAL_DATA, referralSource: ref };
+    // The landing hero collects an email before sending people here, so the
+    // first step arrives already filled in.
+    const email = searchParams.get("email")?.trim() ?? "";
+    return { ...INITIAL_DATA, referralSource: ref, email };
   });
   const [phone, setPhone] = useState("");
   const [signupError, setSignupError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Capture referral from URL if it changes
+  // Capture referral and prefilled email from the URL if they change.
   useEffect(() => {
     const ref = searchParams.get("ref");
-    if (ref) setData((prev) => ({ ...prev, referralSource: ref }));
+    const email = searchParams.get("email")?.trim();
+    if (!ref && !email) return;
+    setData((prev) => ({
+      ...prev,
+      ...(ref ? { referralSource: ref } : {}),
+      // Never clobber something already typed on the account step.
+      ...(email && !prev.email ? { email } : {}),
+    }));
   }, [searchParams]);
 
   const goForward = useCallback(() => {
@@ -173,7 +184,7 @@ function OnboardingInner() {
       }
 
       const signInRes = await signIn("credentials", {
-        email: data.email,
+        identifier: data.email,
         password: data.password,
         redirect: false,
       });
@@ -199,8 +210,7 @@ function OnboardingInner() {
     description,
   }));
 
-  const showHeader = currentStep < CINEMATIC_STEP;
-  const showProgress = currentStep < CINEMATIC_STEP;
+  const showChrome = currentStep < CINEMATIC_STEP;
 
   function renderStep() {
     switch (currentStep) {
@@ -316,20 +326,27 @@ function OnboardingInner() {
 
   return (
     <>
-      <div className="min-h-dvh bg-ivory bg-grain">
-        {showHeader && (
-          <header className="flex items-center justify-between px-5 py-5 md:px-8 md:py-6">
-            <DaisyLogo size="sm" />
-            {currentStep <= 9 && (
-              <Button variant="ghost" size="sm" href="/">
-                Save &amp; exit
-              </Button>
-            )}
-          </header>
-        )}
-
-        {showProgress && (
-          <div className="px-5 pb-8 md:px-8 md:pb-10">
+      <AuthShell
+        title="Sign up"
+        width="md"
+        backLabel={currentStep === 1 ? "Back to home" : "Back a step"}
+        {...(currentStep === 1 ? { backHref: "/" } : { onBack: goBack })}
+        footer={
+          showChrome ? (
+            <>
+              Already have an account?{" "}
+              <Link
+                href="/login"
+                className="text-ivory underline underline-offset-4 transition-opacity hover:opacity-80"
+              >
+                Sign in
+              </Link>
+            </>
+          ) : null
+        }
+      >
+        {showChrome && (
+          <div className="auth-dark mb-6 px-1">
             <ProgressStepper
               currentStep={currentStep}
               totalSteps={TOTAL_PROGRESS_STEPS}
@@ -338,10 +355,9 @@ function OnboardingInner() {
           </div>
         )}
 
-        <main className="flex justify-center px-5 pb-16 md:px-8">
+        <AuthPanel className="auth-dark">
           <div
             key={currentStep}
-            className="w-full max-w-lg"
             style={{
               animation:
                 currentStep < CINEMATIC_STEP
@@ -351,8 +367,8 @@ function OnboardingInner() {
           >
             {renderStep()}
           </div>
-        </main>
-      </div>
+        </AuthPanel>
+      </AuthShell>
 
       <style>{`
         @keyframes onboarding-enter {

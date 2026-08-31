@@ -55,3 +55,6 @@ admin-dashboard.html
 /matches-*.md
 /generated-matches*.md
 /match-exports/
+
+# generated artwork intermediates
+/.artwork/

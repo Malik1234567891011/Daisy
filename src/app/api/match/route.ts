@@ -41,7 +41,9 @@ export async function GET() {
       const lastClosed = await prisma.match.findFirst({
         where: {
           OR: [{ userAId: userId }, { userBId: userId }],
-          status: "DECLINED",
+          // REROLLED means the other side paid to swap out of it. They see
+          // the same calm "didn't work out" screen either way.
+          status: { in: ["DECLINED", "REROLLED"] },
         },
         orderBy: { dropDate: "desc" },
         select: {

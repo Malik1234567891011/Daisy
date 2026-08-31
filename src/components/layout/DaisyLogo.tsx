@@ -38,11 +38,14 @@ function DaisyFlower({ size = 22, className }: { size?: number; className?: stri
 
 interface DaisyLogoProps {
   size?: keyof typeof sizeConfig;
+  /** "light" for placement over dark grounds (the landing hero). */
+  tone?: "dark" | "light";
   className?: string;
 }
 
-export default function DaisyLogo({ size = "md", className }: DaisyLogoProps) {
+export default function DaisyLogo({ size = "md", tone = "dark", className }: DaisyLogoProps) {
   const { text, flower } = sizeConfig[size];
+  const onDark = tone === "light";
 
   return (
     <Link
@@ -53,8 +56,17 @@ export default function DaisyLogo({ size = "md", className }: DaisyLogoProps) {
       )}
       aria-label={`${SITE_NAME} — return to homepage`}
     >
-      <DaisyFlower size={flower} className="text-sage flex-shrink-0" />
-      <span className={cn("font-display text-charcoal leading-none", text)}>
+      <DaisyFlower
+        size={flower}
+        className={cn("flex-shrink-0", onDark ? "text-ivory" : "text-sage")}
+      />
+      <span
+        className={cn(
+          "font-display leading-none",
+          onDark ? "text-ivory" : "text-charcoal",
+          text,
+        )}
+      >
         {SITE_NAME}
       </span>
     </Link>

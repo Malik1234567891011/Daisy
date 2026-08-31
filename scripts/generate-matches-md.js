@@ -93,18 +93,11 @@ var WHITELISTED_EMAILS = [
 
 /** Match last: greedy processes edges without these before any edge involving them */
 var DEPRIORITIZE_FIRST_NAMES = [];
-var _now = new Date();
 
 function normName(s) {
   return String(s || "")
     .trim()
     .toLowerCase();
-}
-
-function isPlusActiveUser(u) {
-  if (!u || u.subscriptionTier !== "PLUS") return false;
-  if (!u.stripeCurrentPeriodEnd) return true;
-  return new Date(u.stripeCurrentPeriodEnd).getTime() > _now.getTime();
 }
 
 function isSuspectEmail(email) {
@@ -390,8 +383,6 @@ prisma.user
       ethnicityPreference: true,
       photoUrl: true,
       referralCode: true,
-      subscriptionTier: true,
-      stripeCurrentPeriodEnd: true,
       createdAt: true,
     },
     orderBy: { createdAt: "asc" },
@@ -766,88 +757,11 @@ prisma.user
       return !used[u.id];
     });
 
-    // Plus rounds: Friday + Sunday (staggered, one-at-a-time delivery)
-    function markPairAsUsedHistorically(aId, bId) {
-      _previouslyMatched[aId + ":" + bId] = true;
-      _previouslyMatched[bId + ":" + aId] = true;
-    }
-
-    function runPlusRound(slotLabel) {
-      var plusPool = eligible.filter(function (u) {
-        return isPlusActiveUser(u);
-      });
-      var plusWithPhoto = plusPool.filter(function (u) { return !!u.photoUrl; });
-      var plusNoPhoto = plusPool.filter(function (u) { return !u.photoUrl; });
-      var usedRound = {};
-      var roundPairs = [];
-
-      var e1 = buildEdges(plusWithPhoto);
-      var r1p = greedyMatch(e1, usedRound, roundPairs);
-      usedRound = r1p.used;
-      roundPairs = r1p.pairs;
-
-      var e2 = buildEdges(plusNoPhoto);
-      var r2p = greedyMatch(e2, usedRound, roundPairs);
-      usedRound = r2p.used;
-      roundPairs = r2p.pairs;
-
-      // relaxed fallback inside plus-only round
-      var remainingPlus = plusPool.filter(function (u) { return !usedRound[u.id]; });
-      function relaxedPlusGreedy(bucket) {
-        var edges = [];
-        for (var i = 0; i < bucket.length; i++) {
-          for (var j = i + 1; j < bucket.length; j++) {
-            var a = bucket[i];
-            var b = bucket[j];
-            if (usedRound[a.id] || usedRound[b.id]) continue;
-            if (_previouslyMatched[a.id + ":" + b.id]) continue;
-            if (!pairEligibleRelaxed(a, b)) continue;
-            var s = softScore(a, b) + softScore(b, a);
-            var io = overlap(a.interests || [], b.interests || []);
-            edges.push({
-              a: a,
-              b: b,
-              score: s,
-              interestOverlap: io,
-              pinNote: "plus " + slotLabel.toLowerCase() + " (relaxed)",
-              dropSlot: slotLabel,
-            });
-          }
-        }
-        edges.sort(function (x, y) {
-          if (y.score !== x.score) return y.score - x.score;
-          if (y.interestOverlap !== x.interestOverlap) return y.interestOverlap - x.interestOverlap;
-          return 0;
-        });
-        for (var e = 0; e < edges.length; e++) {
-          var ed = edges[e];
-          if (usedRound[ed.a.id] || usedRound[ed.b.id]) continue;
-          usedRound[ed.a.id] = true;
-          usedRound[ed.b.id] = true;
-          roundPairs.push(ed);
-        }
-      }
-      relaxedPlusGreedy(remainingPlus.filter(function (u) { return !!u.photoUrl; }));
-      relaxedPlusGreedy(remainingPlus.filter(function (u) { return !u.photoUrl; }));
-
-      for (var rp = 0; rp < roundPairs.length; rp++) {
-        if (!roundPairs[rp].dropSlot) {
-          roundPairs[rp].dropSlot = slotLabel;
-          roundPairs[rp].pinNote = "plus " + slotLabel.toLowerCase() + " drop";
-        }
-        markPairAsUsedHistorically(roundPairs[rp].a.id, roundPairs[rp].b.id);
-        pairs.push(roundPairs[rp]);
-      }
-      notes.push("**Plus " + slotLabel + " round:** matched " + roundPairs.length + " additional pair(s).");
-    }
-
-    // Mark Wednesday pairs in run-history guard so Friday/Sunday avoid same-week repeats.
+    // Every pair is a Wednesday drop. Extra matches are bought one at a
+    // time via paid rerolls, so there are no per-tier extra rounds.
     for (var wp = 0; wp < pairs.length; wp++) {
       if (!pairs[wp].dropSlot) pairs[wp].dropSlot = "WED";
-      markPairAsUsedHistorically(pairs[wp].a.id, pairs[wp].b.id);
     }
-    runPlusRound("FRI");
-    runPlusRound("SUN");
 
     var skippedBusy = users.filter(function (u) {
       return busy[u.id];
@@ -886,7 +800,7 @@ prisma.user
       "- **No repeats:** pairs that were matched in any previous week are excluded.",
     );
     lines.push(
-      "- **Daisy Plus delivery:** free users get Wednesday only; Plus users can receive additional curated drops on **Friday** and **Sunday**.",
+      "- **Delivery:** everyone gets one curated **Wednesday** drop. Extra matches come from paid rerolls, not from tiers.",
     );
     lines.push(
       "- **Previous-week unmatched priority:** users who did not get a match in the previous week are prioritized in greedy ordering.",

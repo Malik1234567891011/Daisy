@@ -10,6 +10,9 @@ export const NAV_LINKS = [
 
 export const HERO = {
   headline: "One match. Every Wednesday.",
+  /* Rendered as two deliberate lines in the hero. `headline` stays intact for
+     metadata and anywhere the string is needed whole. */
+  headlineLines: ["One match.", "Every Wednesday."],
   subheadline:
     "Student-only matchmaking in Montreal. No swiping. Just real connections.",
   cta: "Get started",
@@ -20,6 +23,16 @@ export const HERO = {
     "Privacy-first",
     "No public profiles",
   ],
+  /* Wordmark row under the hero. Abbreviated because the row reads as a
+     texture of names, not as a list you stop to parse. */
+  schools: ["MCGILL", "CONCORDIA", "DAWSON", "UDEM", "VANIER", "UQAM", "HEC"],
+  schoolsNote: "30+ Montreal campuses",
+
+  /* Bump this as the pool grows. */
+  studentCount: "1000+",
+  enrollNote: "Sign up before Wednesday 6 PM for this week's match",
+  enrollCta: "Enroll",
+  enrollPlaceholder: "you@school.ca",
 };
 
 export const HOW_IT_WORKS = {
@@ -42,7 +55,13 @@ export const HOW_IT_WORKS = {
       number: "03",
       title: "Say yes, get connected",
       description:
-        "See your match's profile. If you're both interested, we'll reveal how to reach each other — plus a suggested place to meet.",
+        "See your match's profile. If you're both interested, we'll reveal how to reach each other.",
+    },
+    {
+      number: "04",
+      title: "Go meet them",
+      description:
+        "We suggest a spot near both your campuses \u2014 a cafe, a park, somewhere easy. The rest is up to you.",
     },
   ],
 };
@@ -76,29 +95,29 @@ export const WHY_DAISY = {
 };
 
 export const SAFETY = {
-  heading: "Trust & Safety",
-  subheading:
-    "Trust isn't a feature — it's the foundation. Here's how we protect every member.",
-  cards: [
+  /** Boxed lockup, same treatment as HOW_IT_WORKS: last word takes the accent. */
+  heading: { lead: "Verified. Private. ", accent: "Safe." },
+  /**
+   * Titles are stored as their own lines rather than as one string. The
+   * reference breaks them by measure, and the three phrases are close enough
+   * in length that a single max-width can't reproduce all three breaks — one
+   * of them always lands a word early or late.
+   */
+  items: [
     {
-      title: "Student-only access",
-      description:
-        "Every account requires a valid school email. If you're not a student, you're not on Daisy.",
+      label: "Safe #1",
+      title: ["Verified students", "at your school only"],
+      art: "/safety/Verified_Private_Safe_01.webp",
     },
     {
-      title: "You control what's shared",
-      description:
-        "Choose exactly what to include in your profile. Optional fields stay optional. Always.",
+      label: "Safe #2",
+      title: ["Only your date", "sees you"],
+      art: "/safety/Verified_Private_Safe_02.webp",
     },
     {
-      title: "Report and block easily",
-      description:
-        "Something feel off? One tap to report or block. Our team reviews every case.",
-    },
-    {
-      title: "No public profiles",
-      description:
-        "Your information is never browsable. Only matched partners see what you've chosen to share.",
+      label: "Safe #3",
+      title: ["Coffee dates on", "campus"],
+      art: "/safety/Verified_Private_Safe_03.webp",
     },
   ],
 };
@@ -142,7 +161,7 @@ export const FAQ_ITEMS: FAQItem[] = [
   {
     question: "Is Daisy free?",
     answer:
-      "Daisy is free for students during our current launch period. We'll always be transparent about any future changes.",
+      "Yes. Your weekly match, matching, and mutual connections are all free. The only thing you can pay for is a reroll — $1.99 to swap a match for a new one right away instead of waiting for next Wednesday. You never have to.",
   },
 ];
 

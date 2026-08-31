@@ -29,14 +29,26 @@ export default function IntroAnimation({
     requestAnimationFrame(() => setPhase("bloom"));
   }, []);
 
+  /**
+   * Each phase schedules only its own next step.
+   *
+   * Previously both timers were set together while in "bloom". The first one
+   * moved the phase to "exit", which re-ran this effect and its cleanup
+   * cancelled the second timer — so "done" never arrived, the overlay stayed
+   * mounted at opacity 0, and it swallowed every click on the page.
+   */
   useEffect(() => {
-    if (phase !== "bloom") return;
-    const t1 = setTimeout(() => setPhase("exit"), HOLD_MS);
-    const t2 = setTimeout(() => {
-      setPhase("done");
-      try { sessionStorage.setItem(STORAGE_KEY, "1"); } catch {}
-    }, HOLD_MS + EXIT_MS);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    if (phase === "bloom") {
+      const t = setTimeout(() => setPhase("exit"), HOLD_MS);
+      return () => clearTimeout(t);
+    }
+    if (phase === "exit") {
+      const t = setTimeout(() => {
+        setPhase("done");
+        try { sessionStorage.setItem(STORAGE_KEY, "1"); } catch {}
+      }, EXIT_MS);
+      return () => clearTimeout(t);
+    }
   }, [phase]);
 
   const skip = useCallback(() => {
@@ -44,6 +56,13 @@ export default function IntroAnimation({
       setPhase("done");
       try { sessionStorage.setItem(STORAGE_KEY, "1"); } catch {}
     }
+  }, [phase]);
+
+  // Signals the page that the splash has cleared, so entrance animations can
+  // start. Without this they would play behind the overlay and be over by the
+  // time it lifts.
+  useEffect(() => {
+    if (phase === "done") document.documentElement.dataset.intro = "done";
   }, [phase]);
 
   const showOverlay = phase === "check" || phase === "bloom" || phase === "exit";
@@ -57,7 +76,7 @@ export default function IntroAnimation({
         <div
           onClick={skip}
           aria-hidden="true"
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-ivory cursor-pointer select-none"
+          className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-ivory select-none ${exiting ? "pointer-events-none cursor-default" : "cursor-pointer"}`}
           style={{
             opacity: exiting ? 0 : 1,
             transition: `opacity ${EXIT_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,

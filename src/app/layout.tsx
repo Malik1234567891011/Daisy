@@ -1,20 +1,18 @@
 import type { Metadata } from "next";
-import { DM_Serif_Display, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import Providers from "./providers";
 import Analytics from "@/components/Analytics";
 import "./globals.css";
 
-const dmSerif = DM_Serif_Display({
+// Spencer, supplied by the client. Self-hosted via next/font/local so it is
+// subset, preloaded, and served from our own origin.
+const spencer = localFont({
+  src: "./fonts/Spencer-Regular.otf",
+  // Emitted as its own variable so the Tailwind theme can compose it with
+  // fallbacks; next/font generates a hashed family name we cannot hardcode.
+  variable: "--font-spencer",
+  display: "swap",
   weight: "400",
-  subsets: ["latin"],
-  variable: "--font-display",
-  display: "swap",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-body",
-  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -69,7 +67,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${dmSerif.variable} ${inter.variable}`}>
+    <html lang="en" className={spencer.variable}>
       <head>
         <script
           type="application/ld+json"

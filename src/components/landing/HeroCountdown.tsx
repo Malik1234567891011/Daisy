@@ -41,28 +41,40 @@ export default function HeroCountdown() {
 
   if (isLive) {
     return (
-      <div className="mt-7 text-center lg:text-left">
-        <p className="text-sm sm:text-base text-sage font-medium tracking-wide animate-pulse">
-          Matches are live &#127804;
-        </p>
+      <div className="mt-9 flex items-center justify-center gap-2.5">
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-bloom opacity-60" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-bloom" />
+        </span>
+        <p className="eyebrow text-bloom">Matches are live</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-7 text-center lg:text-left">
-      <p className="text-[13px] sm:text-sm text-text-tertiary tracking-wide mb-1.5">
-        Next drop in
+    <div className="mt-9 flex flex-col items-center">
+      <p className="eyebrow text-ivory/40 mb-3">Next drop in</p>
+
+      {/* tabular-nums so the seconds digit doesn't shift the whole row each tick */}
+      <p className="font-display text-3xl sm:text-4xl text-ivory tabular-nums tracking-tight">
+        {d > 0 && (
+          <>
+            <span>{d}</span>
+            <span className="text-ivory/35 text-xl sm:text-2xl">d</span>
+            <span className="mx-2 text-ivory/20 font-light">:</span>
+          </>
+        )}
+        <span>{fmt(h)}</span>
+        <span className="text-ivory/35 text-xl sm:text-2xl">h</span>
+        <span className="mx-2 text-ivory/20 font-light">:</span>
+        <span>{fmt(m)}</span>
+        <span className="text-ivory/35 text-xl sm:text-2xl">m</span>
+        <span className="mx-2 text-ivory/20 font-light">:</span>
+        <span className="text-ivory/55">{fmt(s)}</span>
+        <span className="text-ivory/30 text-xl sm:text-2xl">s</span>
       </p>
-      <p className="font-display text-xl sm:text-2xl text-charcoal tracking-tight">
-        {d > 0 && <><span>{d}d</span><span className="mx-1.5 text-border font-light">&middot;</span></>}
-        <span>{fmt(h)}h</span>
-        <span className="mx-1.5 text-border font-light">&middot;</span>
-        <span>{fmt(m)}m</span>
-        <span className="mx-1.5 text-border font-light">&middot;</span>
-        <span className="text-text-tertiary">{fmt(s)}s</span>
-      </p>
-      <p className="text-xs text-text-tertiary mt-2.5 tracking-wide">
+
+      <p className="text-xs text-ivory/35 mt-3 tracking-wide">
         {isFirstDrop ? "First drop: Wednesday, April 8" : "Every Wednesday at 6 PM"}
       </p>
     </div>

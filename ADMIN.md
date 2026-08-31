@@ -96,8 +96,24 @@ Opens at http://localhost:5555
 
 ---
 
+## Admin dashboard
+
+```bash
+node scripts/dashboard.js
+```
+
+Serves stats, charts, and user/match tables at http://localhost:3456.
+
 ## Environment
 
-- **Database**: Neon Postgres (connection string in `.env` → `DATABASE_URL`)
+- **Database**: Supabase Postgres, project `cwbetqwqwqedmhnyumld` (migrated off
+  Neon 2026-08-30). `DATABASE_URL` is the transaction pooler (6543,
+  `?pgbouncer=true`); `DIRECT_URL` is the session pooler (5432) and is what
+  Prisma uses for migrations.
 - **ORM**: Prisma v6
 - **Blob storage**: Vercel Blob (photos)
+- **Payments**: Stripe account `Ciel`. Pay-per-reroll, $1.99 CAD one-time — no
+  subscriptions.
+
+> The local `.env` points at **production**. `scripts/wipe-db.js` and the
+> delete-all snippets above act on 275 real users. There is no staging database.

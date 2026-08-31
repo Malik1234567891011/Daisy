@@ -20,13 +20,33 @@
   --color-text-tertiary: #8C948C;
   --color-border: #DDD8CE;
   --color-border-light: #EDE9E2;
+  /* Dark grounds for full-bleed sections. Warm green-blacks, not neutral
+     greys, so they read as the same family as the sage/cream palette. */
+  --color-ink: #14180F;
+  --color-ink-soft: #1D2318;
+  --color-ink-muted: #2C3325;
+
+  /* Butter, brightened to hold its own against ink. A daisy is white petals
+     around a yellow center, so gold is the accent the brand already implies. */
+  --color-bloom: #E8C77E;
+  --color-bloom-soft: #F4E4BC;
+
   --color-error: #B84A4A;
   --color-error-light: #FDF1F1;
   --color-success: #4E7F4E;
   --color-success-light: #EFF6EF;
 
-  --font-display: "DM Serif Display", Georgia, "Times New Roman", serif;
-  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  /* Height of the sticky top bar. Defined once because four separate rules
+     depend on it — the bar itself, the negative margin that slides the hero
+     underneath, the hero's top padding, and the overlay scrim. They drifted
+     apart before and left a 1px seam of page background above the hero. */
+  --nav-h: 84px;
+
+  --font-display: var(--font-spencer), Georgia, "Times New Roman", serif;
+  /* Matches the reference exactly. Helvetica is installed on macOS/iOS and
+     Arial is metrically identical on Windows, so this renders correctly
+     everywhere without embedding a licensed font. */
+  --font-body: Helvetica, Arial, sans-serif;
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -73,24 +93,26 @@
 
   body {
     font-family: var(--font-body);
-    background-color: var(--color-ivory);
+    /* Black ground. Every light page sets its own background on its root
+       element, so this shows behind the landing page and in the overscroll
+       gutter — where ivory used to flash white. */
+    background-color: var(--color-ink);
     color: var(--color-text-primary);
     line-height: 1.65;
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
-    letter-spacing: -0.006em;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     line-height: 1.15;
-    letter-spacing: -0.015em;
+    letter-spacing: normal;
     color: var(--color-charcoal);
     font-weight: 400;
   }
 
-  h1 { line-height: 1.08; letter-spacing: -0.02em; }
+  h1 { line-height: 1.08; }
   h2 { line-height: 1.12; }
 
   ::selection {
@@ -143,7 +165,6 @@
     font-family: var(--font-display);
     font-size: clamp(1.75rem, 3vw, 2.5rem);
     color: var(--color-charcoal);
-    letter-spacing: -0.015em;
   }
 
   .section-subheading {
@@ -185,3 +206,357 @@
     transition: color 0.2s ease;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Display typography
+
+   The identity is carried by scale, not decoration. Fraunces' optical-size
+   axis is driven up alongside font-size so the contrast sharpens as type
+   grows -- the thing that makes big editorial serifs feel designed rather
+   than merely enlarged.
+   ───────────────────────────────────────────────────────────────────────── */
+@layer components {
+  /* 5.6vw rather than the reference's 6.55vw — deliberately about 15% smaller
+     than the measured original, at the client's request.
+     The clamp floor matters more than the vw term on phones: at 390px, 5.6vw
+     is only 22px, so the floor is what mobile actually renders. */
+  .display-hero {
+    font-family: var(--font-display);
+    font-size: clamp(2.875rem, 5.6vw, 7rem);
+    font-weight: 400;
+    line-height: 1.05;
+    letter-spacing: normal;
+    text-wrap: balance;
+  }
+
+  .display-xl {
+    font-family: var(--font-display);
+    font-size: clamp(2.25rem, 5.2vw, 6.5rem);
+    font-weight: 400;
+    line-height: 1.05;
+    letter-spacing: normal;
+    text-wrap: balance;
+  }
+
+  .display-lg {
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 3.4vw, 3.25rem);
+    font-weight: 400;
+    line-height: 1.08;
+    letter-spacing: normal;
+    text-wrap: balance;
+  }
+
+  /* Small all-caps label. Used as the quiet counterweight to the huge serif. */
+  .eyebrow {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+  }
+
+  /* Full-viewport section that can still grow.
+     `min-height` rather than `height`, and no `overflow: hidden`: a centred
+     flex child taller than its container overflows equally in both
+     directions, so with clipping on, the top of a long section disappears
+     under the header. Letting the section grow past 100dvh instead keeps
+     every heading reachable. The absolutely-positioned photo layers are
+     inset-0, so they track the grown height automatically. */
+  .section-full {
+    position: relative;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Surfaces and texture
+   ───────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Frosted panel over a busy ground. */
+  .glass {
+    background-color: color-mix(in oklab, var(--color-ivory) 12%, transparent);
+    backdrop-filter: blur(24px) saturate(1.6);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    border: 1px solid color-mix(in oklab, var(--color-ivory) 22%, transparent);
+  }
+
+  .glass-dark {
+    background-color: color-mix(in oklab, var(--color-ink) 55%, transparent);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    border: 1px solid color-mix(in oklab, var(--color-ivory) 14%, transparent);
+  }
+
+  /* Dot screen. Sits over gradients to stop them looking like flat CSS. */
+  .bg-halftone {
+    background-image: radial-gradient(
+      circle at center,
+      color-mix(in oklab, var(--color-ink) 40%, transparent) 0.5px,
+      transparent 0.6px
+    );
+    background-size: 4px 4px;
+  }
+
+  /* Standing in for photography: layered radial fields that drift. Reads as
+     depth rather than as a flat gradient, which is what a photo would give. */
+  .bg-field {
+    background-color: var(--color-ink);
+    background-image:
+      radial-gradient(ellipse 80% 60% at 20% 15%, color-mix(in oklab, var(--color-sage) 55%, transparent), transparent 70%),
+      radial-gradient(ellipse 70% 50% at 85% 25%, color-mix(in oklab, var(--color-bloom) 28%, transparent), transparent 65%),
+      radial-gradient(ellipse 90% 70% at 50% 100%, color-mix(in oklab, var(--color-olive) 70%, transparent), transparent 70%);
+  }
+
+  .bg-field-warm {
+    background-color: var(--color-ink);
+    background-image:
+      radial-gradient(ellipse 75% 55% at 75% 20%, color-mix(in oklab, var(--color-bloom) 40%, transparent), transparent 68%),
+      radial-gradient(ellipse 85% 65% at 15% 80%, color-mix(in oklab, var(--color-espresso) 65%, transparent), transparent 70%);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Scroll-driven motion
+
+   Uses native scroll timelines where available so there is no JS, no
+   observer, and no jank. Browsers without support simply render the final
+   state -- the base rules below are the finished appearance, and only the
+   @supports block animates toward them.
+   ───────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .reveal,
+  .reveal-late,
+  .reveal-blur,
+  .reveal-scale {
+    opacity: 1;
+  }
+
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      /* Resolves across `entry 15%` to `cover 35%` rather than finishing
+         inside the entry phase. Ending at `entry 60%` completed the fade
+         while the element was still hugging the bottom edge of the screen,
+         so it was over before it was worth watching. */
+      .reveal {
+        animation: reveal-rise linear both;
+        animation-timeline: view();
+        animation-range: entry 15% cover 35%;
+      }
+
+      /* Same motion, held slightly longer, so artwork lands after the text
+         above it instead of the whole block arriving at once. */
+      .reveal-late {
+        animation: reveal-rise linear both;
+        animation-timeline: view();
+        animation-range: entry 30% cover 48%;
+      }
+
+      .reveal-blur {
+        animation: reveal-blur linear both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 55%;
+      }
+
+      /* For full-bleed panels: settles as it enters, softens as it leaves. */
+      .reveal-scale {
+        animation: reveal-settle linear both;
+        animation-timeline: view();
+        animation-range: entry 0% exit 100%;
+      }
+    }
+  }
+
+  @keyframes reveal-rise {
+    from { opacity: 0; transform: translateY(2.5rem); filter: blur(4px); }
+    to   { opacity: 1; transform: none;               filter: blur(0); }
+  }
+
+  @keyframes reveal-blur {
+    from { opacity: 0; filter: blur(14px); transform: translateY(1.5rem) scale(0.98); }
+    to   { opacity: 1; filter: blur(0);    transform: none; }
+  }
+
+  @keyframes reveal-settle {
+    0%   { opacity: 0; filter: blur(10px); transform: scale(1.06); }
+    22%  { opacity: 1; filter: blur(0);    transform: scale(1); }
+    78%  { opacity: 1; filter: blur(0);    transform: scale(1); }
+    100% { opacity: 0.4; filter: blur(6px); transform: scale(0.98); }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Marquee
+
+   The track holds the list twice and travels exactly -50%, so the second
+   copy lands where the first began and the loop is seamless with no jump.
+   ───────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  @keyframes marquee-track {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* Hard clip, no fade — the reference clips its names flat at the edges of a
+     narrow window rather than dissolving them. */
+  .marquee {
+    overflow: hidden;
+  }
+
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee-track 30s linear infinite;
+  }
+
+  .marquee:hover .marquee-track {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track {
+      animation: none;
+      transform: none;
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Liquid glass
+
+   Measured off the reference: no border at all. The bright rim people read as
+   an edge is an inset glow, which is why it stays soft instead of drawing a
+   hard line. The second inset shadow adds a top-edge catchlight — light
+   entering from above is what makes the surface read as glass rather than as
+   flat translucency.
+   ───────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .liquid-glass {
+    backdrop-filter: blur(10px) saturate(1.4);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4);
+    box-shadow:
+      inset 0 0 8px rgba(255, 255, 255, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      0 1px 3px rgba(20, 24, 15, 0.12);
+  }
+
+  /* Slightly stronger while pressed/hovered so the surface feels physical. */
+  .liquid-glass:hover {
+    box-shadow:
+      inset 0 0 12px rgba(255, 255, 255, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      0 2px 6px rgba(20, 24, 15, 0.16);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Entrance
+
+   The intro overlay renders on top of the page rather than replacing it, so a
+   plain load animation would run underneath the splash and be finished before
+   anyone saw it. IntroAnimation stamps data-intro="done" on <html> when it
+   clears, and these only start from there.
+
+   No hidden base state: without the attribute the content is simply visible,
+   so a JS failure degrades to a static page rather than a blank one. The
+   `both` fill applies the from-state during the stagger delay.
+   ───────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  @keyframes enter-rise {
+    from { opacity: 0; transform: translateY(1.75rem); filter: blur(6px); }
+    to   { opacity: 1; transform: none;                filter: blur(0); }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    [data-intro="done"] .enter {
+      animation: enter-rise 800ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      animation-delay: var(--enter-delay, 0ms);
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Dark auth surface
+
+   The onboarding steps are drawn for ivory: white fills, charcoal type, sage
+   rings. Inside the auth card that all inverts. Rather than fork thirteen step
+   components, `.auth-dark` re-points the handful of colour utilities they
+   actually use.
+
+   These rules sit outside `@layer` on purpose — unlayered CSS beats anything
+   in a layer, so a single class here overrides Tailwind's utilities without a
+   specificity fight or `!important`. Theme variables can't do this job:
+   `@theme inline` bakes the literal value into each utility, so redefining
+   --color-charcoal here would change nothing.
+   ───────────────────────────────────────────────────────────────────────── */
+.auth-dark {
+  --auth-fill: rgba(255, 255, 255, 0.07);
+  --auth-fill-strong: rgba(255, 255, 255, 0.12);
+  --auth-line: rgba(255, 255, 255, 0.16);
+  --auth-line-soft: rgba(255, 255, 255, 0.11);
+  --auth-accent: rgba(143, 163, 127, 0.22);
+  color: var(--color-ivory);
+}
+
+/* Type */
+.auth-dark .text-charcoal,
+.auth-dark .text-text-primary { color: #f4f1e7; }
+.auth-dark .text-text-secondary { color: rgba(255, 253, 247, 0.72); }
+.auth-dark .text-text-tertiary { color: rgba(255, 253, 247, 0.52); }
+.auth-dark .text-text-tertiary\/50 { color: rgba(255, 253, 247, 0.34); }
+/* Sage and olive are readable on ivory, not on ink — lift both. */
+.auth-dark .text-sage { color: #a9bc9c; }
+.auth-dark .text-olive { color: #c6d4ba; }
+.auth-dark .text-error { color: #ee9494; }
+.auth-dark .text-red-700 { color: #f0afaf; }
+
+/* Fills */
+.auth-dark .bg-white,
+.auth-dark .bg-ivory,
+.auth-dark .bg-cream,
+.auth-dark .bg-cream\/60,
+.auth-dark .bg-cream\/30 { background-color: var(--auth-fill); }
+.auth-dark .bg-cream-dark\/40,
+.auth-dark .bg-cream-dark\/50,
+.auth-dark .bg-cream-dark\/60 { background-color: var(--auth-fill-strong); }
+.auth-dark .bg-sage-pale,
+.auth-dark .bg-sage-pale\/30,
+.auth-dark .bg-sage-pale\/40,
+.auth-dark .bg-sage-pale\/50,
+.auth-dark .bg-sage-pale\/60 { background-color: var(--auth-accent); }
+.auth-dark .bg-sage-light { background-color: rgba(181, 196, 171, 0.35); }
+.auth-dark .bg-red-50 { background-color: rgba(238, 148, 148, 0.14); }
+.auth-dark .hover\:bg-cream-dark:hover,
+.auth-dark .hover\:bg-sage-pale\/50:hover,
+.auth-dark .active\:bg-cream-dark\/80:active,
+.auth-dark .active\:bg-sage-pale\/80:active { background-color: var(--auth-fill-strong); }
+
+/* Lines */
+.auth-dark .border-border,
+.auth-dark .border-border\/80,
+.auth-dark .hover\:border-border\/80:hover { border-color: var(--auth-line); }
+.auth-dark .border-border-light,
+.auth-dark .border-border-light\/60,
+.auth-dark .border-border-light\/80 { border-color: var(--auth-line-soft); }
+.auth-dark .border-red-200 { border-color: rgba(238, 148, 148, 0.35); }
+/* Selection outlines: sage is too close to the panel's own green to register
+   as "picked", so the chosen row gets the lifted sage instead. */
+.auth-dark .border-sage,
+.auth-dark .border-sage\/40,
+.auth-dark .hover\:border-sage:hover { border-color: rgba(169, 188, 156, 0.8); }
+.auth-dark .ring-sage { --tw-ring-color: rgba(169, 188, 156, 0.55); }
+
+/* Controls */
+.auth-dark input,
+.auth-dark textarea,
+.auth-dark select { color: #f4f1e7; }
+.auth-dark .placeholder\:text-text-tertiary\/70::placeholder { color: rgba(255, 253, 247, 0.38); }
+.auth-dark .disabled\:bg-cream\/50:disabled { background-color: rgba(255, 255, 255, 0.04); }
+/* A focus ring offset in ivory would draw a white gap on the dark panel. */
+.auth-dark .focus\:ring-offset-ivory:focus { --tw-ring-offset-color: rgba(44, 52, 38, 1); }
+/* The native option menu is drawn by the OS and ignores the field's colours,
+   so it needs its own light pairing or it renders white on white. */
+.auth-dark option { color: #1e2420; background-color: #fff; }

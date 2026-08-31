@@ -22,24 +22,24 @@ function FAQItem({
   const triggerId = `faq-trigger-${id}`;
 
   return (
-    <div className="border-b border-border-light/70 last:border-b-0">
+    <div className="border-b border-ivory/20 last:border-b-0">
       <button
         id={triggerId}
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={onToggle}
-        className="flex w-full items-center justify-between gap-4 py-6 text-left transition-colors duration-200 hover:text-charcoal focus-visible:outline-2 focus-visible:outline-sage focus-visible:outline-offset-2 rounded-lg"
+        className="flex w-full items-center justify-between gap-4 py-6 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-bloom focus-visible:outline-offset-2 rounded-lg"
       >
         <span className={cn(
           "font-medium text-base lg:text-[17px] transition-colors duration-200",
-          isOpen ? "text-charcoal" : "text-text-primary"
+          isOpen ? "text-ivory" : "text-ivory/85"
         )}>
           {question}
         </span>
         <ChevronDown
           className={cn(
-            "w-5 h-5 text-text-tertiary flex-shrink-0 transition-all duration-300 ease-out",
-            isOpen && "rotate-180 text-sage"
+            "w-5 h-5 text-ivory/50 flex-shrink-0 transition-all duration-300 ease-out",
+            isOpen && "rotate-180 text-bloom"
           )}
           strokeWidth={1.6}
           aria-hidden="true"
@@ -56,7 +56,7 @@ function FAQItem({
         }}
       >
         <div ref={contentRef} className="pb-6 pr-10">
-          <p className="text-text-secondary text-sm sm:text-[15px] leading-relaxed">
+          <p className="text-ivory/70 text-sm sm:text-[15px] leading-relaxed">
             {answer}
           </p>
         </div>
@@ -73,15 +73,16 @@ export default function FAQ() {
   }, []);
 
   return (
-    <section id="faq" className="py-24 lg:py-32 bg-ivory-warm">
-      <div className="section-container">
-        <div className="text-center mb-14 lg:mb-18">
-          <h2 className="section-heading">
-            Common questions
-          </h2>
+    <section id="faq" className="section-full text-ivory">
+      {/* Heading parked in a sticky left column on wide screens so it stays
+          with the list as you read down it. */}
+      <div className="section-container relative z-10 w-full py-28 grid gap-12 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:gap-20">
+        <div className="lg:sticky lg:top-28 lg:self-start">
+          <p className="eyebrow text-bloom mb-5">FAQ</p>
+          <h2 className="display-lg text-ivory">Common questions</h2>
         </div>
 
-        <div className="max-w-2xl mx-auto">
+        <div className="border-t border-ivory/20">
           {FAQ_ITEMS.map((item, i) => (
             <FAQItem
               key={i}

@@ -12,10 +12,11 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
 import {
   Users, Send, Sparkles, User, Settings, Mail, Heart, X,
-  MapPin, Bell, Calendar,
+  MapPin, Bell, Calendar, Shuffle,
 } from "lucide-react";
 import ProfilePhotoPicker from "@/components/profile/ProfilePhotoPicker";
 import { INTENTIONS, VIBES, IDEAL_HANGOUTS } from "@/lib/constants";
+import { formatRerollPrice } from "@/lib/billing";
 
 /* ─── Types ─── */
 type UserData = {
@@ -28,6 +29,7 @@ type UserData = {
   phoneVerified: boolean;
   onboardingComplete: boolean;
   photoUrl: string | null;
+  rerollCredits: number;
   createdAt: string;
 };
 
@@ -422,10 +424,18 @@ function MatchDashboard({
   match,
   onDecision,
   deciding,
+  onReroll,
+  rerolling,
+  rerollError,
+  hasRerollCredit,
 }: {
   match: MatchData;
   onDecision: (d: "INTERESTED" | "DECLINED") => void;
   deciding: boolean;
+  onReroll: () => void;
+  rerolling: boolean;
+  rerollError: string | null;
+  hasRerollCredit: boolean;
 }) {
   const partner = match.partner!;
   const tags = [
@@ -504,7 +514,44 @@ function MatchDashboard({
         )}
       </Card>
 
-      <p className="max-w-sm mx-auto mt-8 text-center text-xs text-text-tertiary">
+      {/* Paid reroll — swaps this match for a new one immediately */}
+      <div className="max-w-sm mx-auto mt-8">
+        <div className="rounded-xl border border-border-light bg-white/60 px-5 py-4">
+          <div className="flex items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-butter-pale/70 text-espresso border border-butter-light/40">
+              <Shuffle className="w-4 h-4" strokeWidth={1.8} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-charcoal">Not feeling it?</p>
+              <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">
+                Get a different match right now instead of waiting for Wednesday.
+              </p>
+              <button
+                type="button"
+                onClick={onReroll}
+                disabled={rerolling}
+                className={cn(
+                  "mt-3 inline-flex items-center gap-1.5 text-sm font-medium",
+                  "text-sage hover:text-olive transition-colors disabled:opacity-50",
+                )}
+              >
+                {rerolling
+                  ? "Finding someone new\u2026"
+                  : hasRerollCredit
+                    ? "Use your reroll"
+                    : `Reroll for ${formatRerollPrice()}`}
+              </button>
+              {rerollError && (
+                <p className="mt-2 text-xs text-error" role="alert">
+                  {rerollError}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p className="max-w-sm mx-auto mt-6 text-center text-xs text-text-tertiary">
         <Link href="/profile#photo" className="font-medium text-sage hover:text-olive underline-offset-4 hover:underline">
           Update your profile photo
         </Link>
@@ -673,6 +720,8 @@ export default function DashboardPage() {
   const [match, setMatch] = useState<MatchData | null>(null);
   const [loading, setLoading] = useState(true);
   const [deciding, setDeciding] = useState(false);
+  const [rerolling, setRerolling] = useState(false);
+  const [rerollError, setRerollError] = useState<string | null>(null);
   const [matchClosedCalmDismissed, setMatchClosedCalmDismissed] = useState(false);
 
   useEffect(() => {
@@ -683,19 +732,52 @@ export default function DashboardPage() {
 
     let cancelled = false;
 
-    Promise.all([
-      fetch("/api/user").then((r) => (r.ok ? r.json() : null)),
-      fetch("/api/match").then((r) => (r.ok ? r.json() : null)),
-    ])
-      .then(([userData, matchData]) => {
-        if (cancelled) return;
-        if (userData && !userData.phoneVerified) {
-          router.replace("/verify-phone");
-          return;
+    async function load() {
+      // Coming back from Stripe. Spend the credit before reading the match,
+      // so the dashboard never flashes the match they just paid to replace.
+      const params = new URLSearchParams(window.location.search);
+      const rerollParam = params.get("reroll");
+      if (rerollParam) {
+        const sessionId = params.get("session_id");
+        window.history.replaceState({}, "", "/dashboard");
+
+        if (rerollParam === "success") {
+          setRerolling(true);
+          try {
+            const res = await fetch("/api/reroll", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(sessionId ? { sessionId } : {}),
+            });
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              if (!cancelled) {
+                setRerollError(data.error ?? "Couldn't reroll. Please try again.");
+              }
+            }
+          } catch {
+            if (!cancelled) setRerollError("Couldn't reroll. Please try again.");
+          } finally {
+            if (!cancelled) setRerolling(false);
+          }
         }
-        setUser(userData);
-        setMatch(matchData);
-      })
+      }
+
+      const [userData, matchData] = await Promise.all([
+        fetch("/api/user").then((r) => (r.ok ? r.json() : null)),
+        fetch("/api/match").then((r) => (r.ok ? r.json() : null)),
+      ]);
+
+      if (cancelled) return;
+      if (userData && !userData.phoneVerified) {
+        router.replace("/verify-phone");
+        return;
+      }
+      setUser(userData);
+      setMatch(matchData);
+    }
+
+    load()
       .catch(() => {})
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -735,6 +817,60 @@ export default function DashboardPage() {
     [match],
   );
 
+  const handleReroll = useCallback(async () => {
+    setRerollError(null);
+    setRerolling(true);
+    let navigatingToStripe = false;
+
+    async function spendCredit(): Promise<void> {
+      const res = await fetch("/api/reroll", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRerollError(data.error ?? "Couldn't reroll. Please try again.");
+        return;
+      }
+      const [userData, matchData] = await Promise.all([
+        fetch("/api/user").then((r) => (r.ok ? r.json() : null)),
+        fetch("/api/match").then((r) => (r.ok ? r.json() : null)),
+      ]);
+      setUser(userData);
+      setMatch(matchData);
+    }
+
+    try {
+      // Already bought one and never spent it (empty pool, closed tab).
+      if ((user?.rerollCredits ?? 0) > 0) {
+        await spendCredit();
+        return;
+      }
+
+      const res = await fetch("/api/reroll/checkout", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRerollError(data.error ?? "Couldn't start checkout. Please try again.");
+        return;
+      }
+      if (data.alreadyPaid) {
+        await spendCredit();
+        return;
+      }
+      if (data.url) {
+        navigatingToStripe = true;
+        window.location.href = data.url;
+        return;
+      }
+      setRerollError("Couldn't start checkout. Please try again.");
+    } catch {
+      setRerollError("Couldn't reroll. Please try again.");
+    } finally {
+      if (!navigatingToStripe) setRerolling(false);
+    }
+  }, [user]);
+
   const isLoading = status === "loading" || loading;
 
   // Determine dashboard state
@@ -756,7 +892,15 @@ export default function DashboardPage() {
         ) : isMutual ? (
           <MutualDashboard match={match!} />
         ) : hasMatch ? (
-          <MatchDashboard match={match!} onDecision={handleDecision} deciding={deciding} />
+          <MatchDashboard
+            match={match!}
+            onDecision={handleDecision}
+            deciding={deciding}
+            onReroll={handleReroll}
+            rerolling={rerolling}
+            rerollError={rerollError}
+            hasRerollCredit={(user?.rerollCredits ?? 0) > 0}
+          />
         ) : showMatchClosedCalm ? (
           <MatchClosedDashboard
             youDeclined={match!.closedMatch!.youDeclined}

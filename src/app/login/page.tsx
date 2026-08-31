@@ -1,16 +1,28 @@
 "use client";
 
-import { Suspense, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { cn } from "@/lib/utils";
-import Button from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import DaisyLogo from "@/components/layout/DaisyLogo";
+import AuthShell from "@/components/auth/AuthShell";
+import {
+  AuthAltLink,
+  AuthDivider,
+  AuthField,
+  AuthPanel,
+  AuthSubmit,
+} from "@/components/auth/AuthPanel";
 
-function isValidEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+/**
+ * Either credential works: the school email, or the phone number verified
+ * during onboarding. The server resolves which one it got — this only has to
+ * reject input that could never be either.
+ */
+function isValidIdentifier(value: string): boolean {
+  const trimmed = value.trim();
+  if (trimmed.includes("@")) return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+  const digits = trimmed.replace(/[\s\-().]/g, "");
+  return /^\+?[1-9]\d{6,14}$/.test(digits);
 }
 
 function PasswordResetSuccessBanner() {
@@ -18,7 +30,7 @@ function PasswordResetSuccessBanner() {
   if (searchParams.get("reset") !== "success") return null;
   return (
     <p
-      className="mb-5 rounded-xl border border-sage-light/30 bg-sage-pale/40 px-4 py-3 text-center text-sm text-charcoal"
+      className="mb-5 rounded-xl border border-sage-light/25 bg-sage/15 px-4 py-3 text-center text-[14px] text-ivory"
       role="status"
     >
       Your password was updated. Sign in with your new password.
@@ -26,52 +38,68 @@ function PasswordResetSuccessBanner() {
   );
 }
 
+/**
+ * One field at a time: who you are, then your password. The second step is
+ * what gives the card's back chevron something to do.
+ */
+type Step = "identifier" | "password";
+
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [step, setStep] = useState<Step>("identifier");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [emailError, setEmailError] = useState("");
+  const [identifierError, setIdentifierError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
-  function validate(): boolean {
-    let valid = true;
-    setEmailError("");
+  // Moving to the password step without focusing it would leave the one field
+  // on screen unfocused, which reads as a dead end.
+  useEffect(() => {
+    if (step === "password") passwordRef.current?.focus();
+  }, [step]);
+
+  function goToIdentifierStep() {
+    setStep("identifier");
     setPasswordError("");
     setFormError("");
-
-    const trimmed = email.trim();
-    if (!trimmed) {
-      setEmailError("Email is required");
-      valid = false;
-    } else if (!isValidEmail(trimmed)) {
-      setEmailError("Please enter a valid email address");
-      valid = false;
-    }
-
-    if (!password) {
-      setPasswordError("Password is required");
-      valid = false;
-    }
-
-    return valid;
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!validate()) return;
+
+    if (step === "identifier") {
+      const trimmed = identifier.trim();
+      if (!trimmed) {
+        setIdentifierError("Enter your school email or phone number");
+        return;
+      }
+      if (!isValidIdentifier(trimmed)) {
+        setIdentifierError("That doesn’t look like an email or phone number");
+        return;
+      }
+      setIdentifierError("");
+      setStep("password");
+      return;
+    }
+
+    if (!password) {
+      setPasswordError("Password is required");
+      return;
+    }
 
     setIsSubmitting(true);
     setFormError("");
     const result = await signIn("credentials", {
-      email: email.trim().toLowerCase(),
+      identifier: identifier.trim(),
       password,
       redirect: false,
     });
 
     if (result?.error) {
-      setFormError("Invalid email or password");
+      setFormError("Those details don’t match an account");
       setIsSubmitting(false);
       return;
     }
@@ -84,118 +112,97 @@ export default function LoginPage() {
     setIsSubmitting(false);
   }
 
+  const onFirstStep = step === "identifier";
+
   return (
-    <div
-      className={cn(
-        "min-h-screen bg-ivory bg-grain px-4 py-12",
-        "flex flex-col items-center justify-center"
-      )}
+    <AuthShell
+      title="Login"
+      backLabel={onFirstStep ? "Back to home" : "Back to email or phone"}
+      {...(onFirstStep ? { backHref: "/" } : { onBack: goToIdentifierStep })}
+      footer={
+        <>
+          Don&apos;t have an account?{" "}
+          <Link
+            href="/onboarding"
+            className="text-ivory underline underline-offset-4 transition-opacity hover:opacity-80"
+          >
+            Sign up
+          </Link>
+        </>
+      }
     >
-      <div className="flex w-full max-w-sm flex-col items-center gap-10">
-        <DaisyLogo size="md" className="shrink-0" />
+      <AuthPanel>
+        <Suspense fallback={null}>
+          <PasswordResetSuccessBanner />
+        </Suspense>
 
-        <div className="w-full rounded-2xl bg-white p-8 sm:p-10 shadow-card border border-border-light/60">
-          <div className="mb-9 text-center">
-            <h1 className="font-display text-2xl text-charcoal">
-              Welcome back
-            </h1>
-            <p className="mt-2.5 text-sm text-text-secondary">
-              Sign in to check on your matches
-            </p>
-          </div>
-
-          <Suspense fallback={null}>
-            <PasswordResetSuccessBanner />
-          </Suspense>
-
-          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-            <Input
-              label="Email"
-              type="email"
-              name="email"
-              autoComplete="email"
-              placeholder="you@mail.mcgill.ca"
-              value={email}
-              error={emailError}
+        <form onSubmit={handleSubmit} noValidate>
+          {onFirstStep ? (
+            <AuthField
+              label="School email or phone number"
+              type="text"
+              inputMode="email"
+              name="identifier"
+              autoComplete="username"
+              autoFocus
+              placeholder="school email or phone number"
+              value={identifier}
+              error={identifierError}
               onChange={(e) => {
-                setEmail(e.target.value);
-                if (emailError) setEmailError("");
+                setIdentifier(e.target.value);
+                if (identifierError) setIdentifierError("");
                 if (formError) setFormError("");
               }}
-              disabled={isSubmitting}
             />
-
-            <div>
-              <Input
-                label="Password"
-                type="password"
-                name="password"
-                autoComplete="current-password"
-                placeholder="Your password"
-                value={password}
-                error={passwordError}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (passwordError) setPasswordError("");
-                  if (formError) setFormError("");
-                }}
-                disabled={isSubmitting}
-              />
-              <div className="mt-2.5 text-right">
-                <Link
-                  href="/forgot-password"
-                  className="text-[13px] text-sage transition-colors duration-200 hover:text-olive"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-            </div>
-
-            {formError ? (
-              <p className="text-[13px] text-error" role="alert">
-                {formError}
-              </p>
-            ) : null}
-
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              className="w-full"
+          ) : (
+            <AuthField
+              ref={passwordRef}
+              label="Password"
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              placeholder="your password"
+              value={password}
+              error={passwordError}
               disabled={isSubmitting}
-            >
-              {isSubmitting ? "Signing in\u2026" : "Sign in"}
-            </Button>
-          </form>
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (passwordError) setPasswordError("");
+                if (formError) setFormError("");
+              }}
+            />
+          )}
 
-          <div className="relative my-9">
-            <div className="absolute inset-0 flex items-center" aria-hidden>
-              <div className="w-full border-t border-border-light" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-white px-4 text-text-tertiary tracking-wide uppercase">or</span>
-            </div>
+          {!onFirstStep && !passwordError ? (
+            <p className="mt-2 truncate text-[13px] text-white/45">
+              Signing in as {identifier.trim()}
+            </p>
+          ) : null}
+
+          {formError ? (
+            <p className="mt-3 text-[13px] text-error" role="alert">
+              {formError}
+            </p>
+          ) : null}
+
+          <div className="mt-7">
+            <AuthSubmit type="submit" disabled={isSubmitting}>
+              {onFirstStep
+                ? "Continue"
+                : isSubmitting
+                  ? "Signing in…"
+                  : "Sign in"}
+            </AuthSubmit>
           </div>
+        </form>
 
-          <Button
-            variant="secondary"
-            size="lg"
-            className="w-full"
-            href="/onboarding"
-          >
-            Create an account
-          </Button>
-        </div>
-
-        <p className="text-center text-sm text-text-tertiary">
-          <Link
-            href="/"
-            className="text-sage transition-colors duration-200 hover:text-olive"
-          >
-            Back to home
-          </Link>
-        </p>
-      </div>
-    </div>
+        {onFirstStep ? null : (
+          <>
+            <AuthDivider />
+            <AuthAltLink href="/forgot-password">Forgot password?</AuthAltLink>
+          </>
+        )}
+      </AuthPanel>
+    </AuthShell>
   );
 }

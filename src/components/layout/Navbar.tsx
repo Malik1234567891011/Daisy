@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -8,10 +8,19 @@ import { NAV_LINKS } from "@/lib/constants";
 import DaisyLogo from "@/components/layout/DaisyLogo";
 import Button from "@/components/ui/Button";
 
-export default function Navbar() {
-  const { data: session, status } = useSession();
+interface NavbarProps {
+  /**
+   * "over" floats the bar transparently on the landing hero for the whole
+   * scroll — it never takes a background, and only the call to action changes.
+   * Every other page has a light background and wants "solid" from the first
+   * pixel.
+   */
+  tone?: "solid" | "over";
+}
+
+export default function Navbar({ tone = "solid" }: NavbarProps) {
+  const { status } = useSession();
   const isLoggedIn = status === "authenticated";
-  const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -20,224 +29,118 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => {
-    document.body.style.overflow = menuOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [menuOpen]);
+  const overlay = tone === "over";
 
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && menuOpen) setMenuOpen(false);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [menuOpen]);
+  // Variants, not className overrides: `cn` is plain clsx, so an override
+  // like `bg-ivory` would sit alongside the variant's `bg-sage` and lose to
+  // stylesheet order.
+  const ghostVariant = overlay ? "onDarkQuiet" : "ghost";
+  // Over the hero the CTA is glass; past the first screen it fills in solid
+  // with accent text. That swap is the only thing marking scroll progress,
+  // since the bar itself never takes a background.
+  const solidVariant = overlay ? (scrolled ? "onDarkAccent" : "onDark") : "primary";
 
-  const close = useCallback(() => setMenuOpen(false), []);
+  // On phones the primary action is withheld until you have scrolled — the
+  // hero already carries a full-width enrol form, so a second competing call
+  // to action at the top is noise. There is no hamburger: the nav links live
+  // in the footer, and a menu holding three anchor links isn't worth the
+  // scroll lock, focus trap and overlay it costs.
+  const showMobileCta = !overlay || scrolled;
 
   return (
-    <>
-      <header
-        className={cn(
-          "sticky top-0 z-50 w-full bg-ivory/80 backdrop-blur-xl",
-          "transition-all duration-500 ease-out",
-          scrolled
-            ? "border-b border-border-light/60 shadow-sm"
-            : "border-b border-transparent"
-        )}
+    <header
+      className={cn(
+        "sticky top-0 z-50 w-full transition-all duration-500 ease-out",
+        overlay
+          // border-b-0, not a transparent border: a transparent border still
+          // occupies a pixel of flow, which left a hairline of page
+          // background showing above the hero.
+          ? "bg-transparent border-b-0"
+          : scrolled
+            ? "bg-ivory/80 backdrop-blur-xl border-b border-border-light/60 shadow-sm"
+            : "bg-ivory/80 backdrop-blur-xl border-b border-transparent",
+      )}
+    >
+      {/* Scrim, overlay mode only. The bar never takes a background, so
+          section content scrolls directly under it — headings were colliding
+          with the nav links and both became unreadable. A short gradient
+          darkens whatever passes beneath without reading as a bar. */}
+      {overlay && (
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-[calc(var(--nav-h)+2.25rem)] bg-gradient-to-b from-ink/55 via-ink/25 to-transparent"
+          aria-hidden="true"
+        />
+      )}
+
+      <nav
+        className="section-container relative flex h-[var(--nav-h)] items-center justify-between"
+        aria-label="Main navigation"
       >
-        <nav
-          className="section-container flex h-[68px] items-center justify-between"
-          aria-label="Main navigation"
-        >
-          <DaisyLogo size="md" />
+        <DaisyLogo size="md" tone={overlay ? "light" : "dark"} />
 
-          <ul className="hidden lg:flex items-center gap-9" role="list">
-            {NAV_LINKS.map((link) => (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className="relative text-[13px] tracking-wide text-text-secondary transition-colors duration-200 hover:text-charcoal"
-                >
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
+        <ul className="hidden lg:flex items-center gap-9" role="list">
+          {NAV_LINKS.map((link) => (
+            <li key={link.href}>
+              <Link
+                href={link.href}
+                className={cn(
+                  "relative text-[13px] tracking-wide transition-colors duration-200",
+                  overlay
+                    ? "text-ivory/75 hover:text-ivory"
+                    : "text-text-secondary hover:text-charcoal",
+                )}
+              >
+                {link.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
 
-          <div className="hidden lg:flex items-center gap-2.5">
-            {isLoggedIn ? (
-              <>
-                <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: "/" })}>
-                  Sign out
-                </Button>
-                <Button variant="primary" href="/dashboard" size="sm">
-                  Dashboard
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button variant="ghost" href="/login" size="sm">
-                  Sign in
-                </Button>
-                <Button variant="primary" href="/onboarding" size="sm">
-                  Get started
-                </Button>
-              </>
-            )}
-          </div>
-
-          <div className="flex lg:hidden items-center gap-2">
-            {isLoggedIn ? (
-              <Button variant="primary" href="/dashboard" size="sm">
+        <div className="hidden lg:flex items-center gap-2.5">
+          {isLoggedIn ? (
+            <>
+              <Button
+                variant={ghostVariant}
+                size="sm"
+                onClick={() => signOut({ callbackUrl: "/" })}
+              >
+                Sign out
+              </Button>
+              <Button variant={solidVariant} href="/dashboard" size="sm">
                 Dashboard
               </Button>
-            ) : (
-              <Button variant="primary" href="/onboarding" size="sm">
+            </>
+          ) : (
+            <>
+              <Button variant={ghostVariant} href="/login" size="sm">
+                Sign in
+              </Button>
+              <Button variant={solidVariant} href="/onboarding" size="sm">
                 Get started
               </Button>
-            )}
-            <button
-              type="button"
-              onClick={() => setMenuOpen((prev) => !prev)}
-              className={cn(
-                "relative flex items-center justify-center w-10 h-10 rounded-xl",
-                "text-text-secondary hover:text-charcoal hover:bg-sage-pale/40",
-                "transition-all duration-200"
-              )}
-              aria-expanded={menuOpen}
-              aria-controls="mobile-menu"
-              aria-label={menuOpen ? "Close menu" : "Open menu"}
-            >
-              <div className="w-[18px] h-[14px] relative">
-                <span
-                  className={cn(
-                    "absolute left-0 w-full h-[1.5px] rounded-full bg-current",
-                    "transition-all duration-300 ease-out",
-                    menuOpen ? "top-[6px] rotate-45" : "top-0"
-                  )}
-                />
-                <span
-                  className={cn(
-                    "absolute left-0 top-[6px] w-full h-[1.5px] rounded-full bg-current",
-                    "transition-opacity duration-200",
-                    menuOpen && "opacity-0"
-                  )}
-                />
-                <span
-                  className={cn(
-                    "absolute left-0 w-full h-[1.5px] rounded-full bg-current",
-                    "transition-all duration-300 ease-out",
-                    menuOpen ? "top-[6px] -rotate-45" : "top-[12px]"
-                  )}
-                />
-              </div>
-            </button>
-          </div>
-        </nav>
-      </header>
+            </>
+          )}
+        </div>
 
-      {/* Mobile menu — OUTSIDE header to avoid backdrop-filter rendering bugs */}
-      {menuOpen && (
-        <div
-          id="mobile-menu"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Mobile navigation"
-          className="fixed inset-0 z-[999] lg:hidden"
-          style={{ backgroundColor: "#FFFDF7" }}
-        >
-          {/* Duplicate top bar so it looks seamless */}
-          <div className="flex items-center justify-between px-5 h-[68px] md:px-8">
-            <DaisyLogo size="md" />
-            <div className="flex items-center gap-2">
-              {isLoggedIn ? (
-                <Button variant="primary" href="/dashboard" size="sm" onClick={close}>
-                  Dashboard
-                </Button>
-              ) : (
-                <Button variant="primary" href="/onboarding" size="sm" onClick={close}>
+        <div className="flex items-center gap-2 lg:hidden">
+          {isLoggedIn ? (
+            <Button variant={solidVariant} href="/dashboard" size="sm">
+              Dashboard
+            </Button>
+          ) : (
+            <>
+              <Button variant={ghostVariant} href="/login" size="sm">
+                Sign in
+              </Button>
+              {showMobileCta && (
+                <Button variant={solidVariant} href="/onboarding" size="sm">
                   Get started
                 </Button>
               )}
-              <button
-                type="button"
-                onClick={close}
-                className="relative flex items-center justify-center w-10 h-10 rounded-xl text-text-secondary hover:text-charcoal"
-                aria-label="Close menu"
-              >
-                <div className="w-[18px] h-[14px] relative">
-                  <span className="absolute left-0 w-full h-[1.5px] rounded-full bg-current top-[6px] rotate-45" />
-                  <span className="absolute left-0 w-full h-[1.5px] rounded-full bg-current top-[6px] -rotate-45" />
-                </div>
-              </button>
-            </div>
-          </div>
-
-          <nav className="flex flex-col px-6 pt-6 pb-10 h-[calc(100dvh-68px)]">
-            <ul className="flex flex-col gap-1" role="list">
-              {NAV_LINKS.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    onClick={close}
-                    className="block rounded-xl px-4 py-4 text-lg text-text-secondary transition-all duration-200 hover:text-charcoal hover:bg-sage-pale/30"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-auto flex flex-col gap-3">
-              {isLoggedIn ? (
-                <>
-                  <Button
-                    variant="primary"
-                    href="/dashboard"
-                    size="lg"
-                    className="w-full justify-center"
-                    onClick={close}
-                  >
-                    Dashboard
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="lg"
-                    className="w-full justify-center"
-                    onClick={() => { close(); signOut({ callbackUrl: "/" }); }}
-                  >
-                    Sign out
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    variant="primary"
-                    href="/onboarding"
-                    size="lg"
-                    className="w-full justify-center"
-                    onClick={close}
-                  >
-                    Get started
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    href="/login"
-                    size="lg"
-                    className="w-full justify-center"
-                    onClick={close}
-                  >
-                    Sign in
-                  </Button>
-                </>
-              )}
-            </div>
-          </nav>
+            </>
+          )}
         </div>
-      )}
-    </>
+      </nav>
+    </header>
   );
 }
