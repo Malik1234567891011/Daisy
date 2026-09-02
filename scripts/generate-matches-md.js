@@ -360,6 +360,8 @@ prisma.user
     where: {
       phoneVerified: true,
       onboardingComplete: true,
+      // Synthetic reviewer accounts are never proposed to real students.
+      isTestAccount: false,
     },
     select: {
       id: true,

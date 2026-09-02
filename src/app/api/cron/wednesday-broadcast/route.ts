@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const users = await getWednesdayBroadcastRecipients(prisma);
+    const users = await getWednesdayBroadcastRecipients(prisma, now);
     const result = await sendWednesdayBroadcastSms(prisma, users);
     return NextResponse.json({
       ok: true,

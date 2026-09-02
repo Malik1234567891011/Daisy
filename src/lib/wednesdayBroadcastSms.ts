@@ -64,8 +64,26 @@ export function isWednesdaySixPmTorontoWindow(now: Date): boolean {
   return (hour === 17 || hour === 18) && minute < 15;
 }
 
+/** How far back a match's dropDate can be and still count as "this drop". */
+export const DROP_WINDOW_MS = 48 * 60 * 60 * 1000;
+
 /**
- * At least one match whose drop time has passed in the last 48h (weekly drop just went live).
+ * Matches belonging to the drop that just went live.
+ *
+ * Synthetic accounts are excluded on both sides. A reviewer's seeded match is
+ * still a Match row with a dropDate, and without this it would satisfy the
+ * "has a drop happened" gate for the entire production user base.
+ */
+function realDropWhere(now: Date) {
+  return {
+    dropDate: { lte: now, gte: new Date(now.getTime() - DROP_WINDOW_MS) },
+    userA: { isTestAccount: false },
+    userB: { isTestAccount: false },
+  } as const;
+}
+
+/**
+ * At least one real match whose drop time has passed in the last 48h (weekly drop just went live).
  * Disable with BROADCAST_REQUIRE_RECENT_DROP=no
  */
 export async function hasRecentPublicDrop(
@@ -73,19 +91,33 @@ export async function hasRecentPublicDrop(
   now: Date,
 ): Promise<boolean> {
   if (process.env.BROADCAST_REQUIRE_RECENT_DROP === "no") return true;
-  const since = new Date(now.getTime() - 48 * 60 * 60 * 1000);
-  const n = await prisma.match.count({
-    where: { dropDate: { lte: now, gte: since } },
-  });
+  const n = await prisma.match.count({ where: realDropWhere(now) });
   return n > 0;
 }
 
-export async function getWednesdayBroadcastRecipients(prisma: PrismaClient) {
+/**
+ * Who gets texted: people who actually have a live match in this drop.
+ *
+ * This used to return every consenting user regardless of whether they were in
+ * the drop, which meant one stray Match row could trigger a message to the
+ * whole user base telling them a match was waiting when none was. Recipients
+ * are now derived from the drop itself.
+ */
+export async function getWednesdayBroadcastRecipients(
+  prisma: PrismaClient,
+  now: Date,
+) {
+  const where = realDropWhere(now);
   return prisma.user.findMany({
     where: {
       phoneVerified: true,
       phoneNumber: { not: null },
       smsConsent: true,
+      isTestAccount: false,
+      OR: [
+        { matchesAsA: { some: { ...where, status: { in: ["PENDING", "MUTUAL"] } } } },
+        { matchesAsB: { some: { ...where, status: { in: ["PENDING", "MUTUAL"] } } } },
+      ],
     },
     select: {
       id: true,

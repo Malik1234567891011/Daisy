@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { partnerPayload } from "@/lib/matchPayload";
 
 export async function GET() {
   try {
@@ -80,20 +81,7 @@ export async function GET() {
       theirDecision,
       isMutual,
       dropDate: match.dropDate,
-      partner: {
-        firstName: partner.firstName,
-        age: partner.age,
-        school: partner.school,
-        photoUrl: partner.photoUrl,
-        intentions: partner.intentions,
-        vibe: partner.vibe,
-        interests: partner.interests,
-        idealHangout: partner.idealHangout,
-        // Only reveal contact info if mutual
-        ...(isMutual
-          ? { contactMethod: partner.contactMethod, contactValue: partner.contactValue }
-          : {}),
-      },
+      partner: partnerPayload(partner, isMutual),
       suggestedSpot: isMutual ? match.suggestedSpot : null,
     });
   } catch (err) {

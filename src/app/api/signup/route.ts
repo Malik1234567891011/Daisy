@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { nanoid } from "@/lib/utils";
+import { checkEligibility } from "@/lib/eligibility";
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,11 +12,18 @@ export async function POST(req: NextRequest) {
       intentions, vibe, interests, idealHangout, availability,
       genderPreference, schoolPreference, ageRangeMin, ageRangeMax,
       majorPreference, ethnicityPreference, contactMethod, contactValue,
-      referralSource,
+      referralSource, studentAttested, age18Attested,
     } = body;
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
+    }
+
+    // 18+ and student eligibility. The onboarding form checks these too, but
+    // this is the gate — a request that skips the UI still has to pass here.
+    const eligibility = checkEligibility({ age, studentAttested, age18Attested });
+    if (!eligibility.ok) {
+      return NextResponse.json({ error: eligibility.error }, { status: 400 });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
@@ -46,7 +54,7 @@ export async function POST(req: NextRequest) {
         firstName: firstName || null,
         school: school || null,
         major: major || null,
-        age: age ? parseInt(age, 10) : null,
+        age: eligibility.age,
         gender: gender || null,
         ethnicity: ethnicity || null,
         intentions: intentions || null,
@@ -65,6 +73,8 @@ export async function POST(req: NextRequest) {
         referralCode,
         referredBy: referralSource || null,
         smsConsent: true,
+        studentAttestedAt: new Date(),
+        age18AttestedAt: new Date(),
         onboardingComplete: false,
       },
     });
