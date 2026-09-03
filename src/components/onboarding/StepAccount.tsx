@@ -94,7 +94,7 @@ export default function StepAccount({
         Create your account
       </h2>
       <p className="text-text-secondary mb-8">
-        Use your school email for verification. We&rsquo;ll never share it.
+        Daisy is student-only, so please sign up with your school email. We&rsquo;ll never share it.
       </p>
 
       <form onSubmit={handleSubmit} noValidate>
@@ -106,7 +106,7 @@ export default function StepAccount({
           onChange={handleEmailChange}
           onBlur={handleEmailBlur}
           error={emailTouched ? emailError || undefined : undefined}
-          helperText="We use this to verify you're a student"
+          helperText="We use this to keep Daisy student-only"
           autoFocus
           autoComplete="email"
         />

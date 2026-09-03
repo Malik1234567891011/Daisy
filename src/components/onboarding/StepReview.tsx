@@ -5,9 +5,12 @@ import Button from "@/components/ui/Button";
 import { INTENTIONS, VIBES, IDEAL_HANGOUTS, AVAILABILITY } from "@/lib/constants";
 import { parseEthnicityPreference } from "@/lib/ethnicityPreference";
 import type { OnboardingData } from "@/lib/types";
+import { ATTESTATION_COPY } from "@/lib/eligibility";
 
 interface StepReviewProps {
   data: OnboardingData;
+  attestations: { age18: boolean; student: boolean };
+  onAttestationChange: (key: "age18" | "student", value: boolean) => void;
   onNext: () => void;
   onBack: () => void;
   goToStep: (step: number) => void;
@@ -61,6 +64,28 @@ function SectionHeader({
   );
 }
 
+function Attestation({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  label: string;
+}) {
+  return (
+    <label className="flex items-start gap-3 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-4 w-4 shrink-0 accent-sage"
+      />
+      <span className="text-sm text-text-secondary leading-relaxed">{label}</span>
+    </label>
+  );
+}
+
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
@@ -75,6 +100,8 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
 
 export default function StepReview({
   data,
+  attestations,
+  onAttestationChange,
   onNext,
   onBack,
   goToStep,
@@ -167,6 +194,19 @@ export default function StepReview({
         </Card>
       </div>
 
+      <div className="mt-8 space-y-3">
+        <Attestation
+          checked={attestations.age18}
+          onChange={(v) => onAttestationChange("age18", v)}
+          label={ATTESTATION_COPY.age18}
+        />
+        <Attestation
+          checked={attestations.student}
+          onChange={(v) => onAttestationChange("student", v)}
+          label={ATTESTATION_COPY.student}
+        />
+      </div>
+
       {error && (
         <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
@@ -177,7 +217,13 @@ export default function StepReview({
         <Button type="button" variant="ghost" onClick={onBack} disabled={loading}>
           Back
         </Button>
-        <Button type="button" size="lg" onClick={onNext} disabled={loading} className="flex-1">
+        <Button
+          type="button"
+          size="lg"
+          onClick={onNext}
+          disabled={loading || !attestations.age18 || !attestations.student}
+          className="flex-1"
+        >
           {loading ? "Joining\u2026" : "Confirm & join"}
         </Button>
       </div>

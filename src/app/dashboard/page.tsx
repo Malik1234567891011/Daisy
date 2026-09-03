@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import ProfilePhotoPicker from "@/components/profile/ProfilePhotoPicker";
 import { INTENTIONS, VIBES, IDEAL_HANGOUTS } from "@/lib/constants";
-import { formatRerollPrice } from "@/lib/billing";
+import { formatRerollPrice, formatRerollPriceWithCurrency } from "@/lib/billing";
 
 /* ─── Types ─── */
 type UserData = {
@@ -525,6 +525,8 @@ function MatchDashboard({
               <p className="text-sm font-medium text-charcoal">Not feeling it?</p>
               <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">
                 Get a different match right now instead of waiting for Wednesday.
+                One-time {formatRerollPriceWithCurrency()} — not a subscription,
+                and it doesn&rsquo;t renew.
               </p>
               <button
                 type="button"

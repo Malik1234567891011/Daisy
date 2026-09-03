@@ -81,6 +81,9 @@ function OnboardingInner() {
   });
   const [phone, setPhone] = useState("");
   const [signupError, setSignupError] = useState("");
+  // Deliberately not persisted with the rest of the draft: an attestation has
+  // to be an act the user performs, not a value restored from storage.
+  const [attestations, setAttestations] = useState({ age18: false, student: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Capture referral and prefilled email from the URL if they change.
@@ -144,6 +147,13 @@ function OnboardingInner() {
     }));
   }, []);
 
+  const handleAttestationChange = useCallback(
+    (key: "age18" | "student", value: boolean) => {
+      setAttestations((prev) => ({ ...prev, [key]: value }));
+    },
+    [],
+  );
+
   const handleSignup = useCallback(async () => {
     setSignupError("");
     setIsSubmitting(true);
@@ -175,6 +185,8 @@ function OnboardingInner() {
           contactMethod: data.contact.method,
           contactValue: data.contact.value,
           referralSource: data.referralSource ?? "",
+          age18Attested: attestations.age18,
+          studentAttested: attestations.student,
         }),
       });
 
@@ -203,7 +215,7 @@ function OnboardingInner() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [data]);
+  }, [data, attestations.age18, attestations.student]);
 
   const steps = ONBOARDING_STEPS.map(({ label, description }) => ({
     label,
@@ -286,6 +298,8 @@ function OnboardingInner() {
         return (
           <StepReview
             data={data}
+            attestations={attestations}
+            onAttestationChange={handleAttestationChange}
             onNext={handleSignup}
             onBack={goBack}
             goToStep={goToStep}

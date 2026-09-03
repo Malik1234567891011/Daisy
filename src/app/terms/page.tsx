@@ -67,12 +67,18 @@ export default function TermsPage() {
 
               <Section title="Eligibility">
                 <p>
-                  Daisy is for adults who are currently enrolled students. You
-                  must be at least 18 years old and able to enter a binding
-                  agreement where you live. You also confirm that the school
-                  affiliation and enrollment information you provide is accurate
-                  when you sign up. We may suspend or close accounts that don’t
-                  meet these requirements.
+                  Daisy is only available to people aged 18 or older. It is
+                  intended for students who are currently enrolled at a
+                  university, college or CEGEP. When you sign up you confirm
+                  both of these things, and that the school and enrollment
+                  information on your profile is accurate.
+                </p>
+                <p className="mt-3">
+                  We rely on what you tell us. Daisy does not ask for
+                  identification, student cards, or proof of enrollment, and we
+                  do not independently verify your age or student status. If we
+                  learn that an account does not meet these requirements, we may
+                  suspend or close it.
                 </p>
               </Section>
 
@@ -106,6 +112,39 @@ export default function TermsPage() {
                   respond, or that any connection will lead to a relationship.
                   We’re here to facilitate introductions, not to mediate
                   disputes between users after you connect.
+                </p>
+              </Section>
+
+              <Section title="Payments and refunds">
+                <p>
+                  Daisy’s core service is free. Creating an account, receiving
+                  your weekly match, and connecting when there is mutual
+                  interest cost nothing.
+                </p>
+                <p className="mt-3">
+                  Daisy may offer optional paid features. Currently there is
+                  one: a reroll, which costs $1.99 CAD as a one-time purchase
+                  and provides one replacement match for the current matching
+                  period. A reroll is not a subscription. It does not renew, and
+                  buying one does not enrol you in any recurring charge. The
+                  price is shown before you pay, and payments are processed by
+                  Stripe.
+                </p>
+                <p className="mt-3">
+                  Because a reroll is delivered immediately once a replacement
+                  match is generated, reroll purchases are generally final once
+                  fulfilled. We may issue refunds for duplicate charges, for
+                  technical failures where the reroll you paid for was not
+                  delivered, or where a refund is otherwise required by
+                  applicable law. For billing questions or to request a refund,
+                  email{" "}
+                  <a
+                    href="mailto:malik.shourbaji@gmail.com"
+                    className="font-medium text-sage underline-offset-4 hover:underline"
+                  >
+                    malik.shourbaji@gmail.com
+                  </a>
+                  .
                 </p>
               </Section>
 
