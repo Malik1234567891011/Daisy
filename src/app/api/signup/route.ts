@@ -39,7 +39,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Please use a valid school email address" }, { status: 400 });
     }
 
-    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    // Existence check only — select one column so this cannot break when the
+    // model gains fields the database does not have yet.
+    const existing = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: { id: true },
+    });
     if (existing) {
       return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
     }

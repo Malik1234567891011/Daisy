@@ -4,6 +4,24 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 
 /**
+ * Exactly the columns authorize() reads.
+ *
+ * This is deliberately explicit. A bare findUnique asks Postgres for every
+ * column in the Prisma model, so the moment the model gains a field the
+ * database has not been migrated to yet, every sign-in throws — including for
+ * addresses that don't exist, because the query fails before the null check.
+ * Auth.js reports that as a bare "Configuration" error, which says nothing.
+ * Listing the fields keeps login working across a schema change.
+ */
+const AUTH_SELECT = {
+  id: true,
+  email: true,
+  passwordHash: true,
+  firstName: true,
+  phoneVerified: true,
+} as const;
+
+/**
  * People sign in with whatever they gave us — a school email or the phone
  * number they verified during onboarding. Anything without an "@" is read as a
  * phone: separators are stripped, and a bare 10-digit number is assumed North
@@ -39,11 +57,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (isEmail(identifier)) {
           user = await prisma.user.findUnique({
             where: { email: identifier.toLowerCase() },
+            select: AUTH_SELECT,
           });
         } else {
           const phoneNumber = toE164(identifier);
           if (!phoneNumber) return null;
-          user = await prisma.user.findUnique({ where: { phoneNumber } });
+          user = await prisma.user.findUnique({
+            where: { phoneNumber },
+            select: AUTH_SELECT,
+          });
           // An unverified number was never proven to belong to this account,
           // so it is not something you can sign in with.
           if (user && !user.phoneVerified) return null;
