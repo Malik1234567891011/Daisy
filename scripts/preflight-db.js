@@ -55,11 +55,20 @@ async function main() {
   const [{ newest }] = await prisma.$queryRaw`SELECT max("createdAt") AS newest FROM "User"`;
   out.fingerprint = { users, matches, newestUser: newest };
 
+  // The id matters more than the email. The same address exists in more than
+  // one database, so only the id says which database you are looking at.
   const testers = await prisma.$queryRaw`
-    SELECT email FROM "User"
+    SELECT id, email FROM "User"
     WHERE email IN ('facebooktester@daisyweekly.com','facebooktester2@daisyweekly.com')
   `;
-  out.reviewerAccounts = testers.map((t) => t.email);
+  out.reviewerAccounts = testers.map((t) => `${t.email} (id ${t.id})`);
+
+  const KNOWN = {
+    cmtkco7b30000eznaz9xwrg6u: "Neon ep-misty-paper (the DB in .env — NOT production)",
+    cmtm62ydq0000jl04xojshjsr: "PRODUCTION (row created accidentally via the live signup endpoint)",
+  };
+  const marker = testers.map((t) => KNOWN[t.id]).filter(Boolean);
+  out.identifiedAs = marker.length ? marker : ["unknown — no known marker row here"];
 
   console.log(JSON.stringify(out, null, 2));
   console.log(
