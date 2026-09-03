@@ -21,8 +21,3 @@ export function formatRerollPrice(): string {
   const dollars = REROLL_PRICE_CENTS / 100;
   return Number.isInteger(dollars) ? `$${dollars}` : `$${dollars.toFixed(2)}`;
 }
-
-/** "$1.99 CAD" — for the disclosure shown before checkout starts. */
-export function formatRerollPriceWithCurrency(): string {
-  return `${formatRerollPrice()} ${REROLL_CURRENCY.toUpperCase()}`;
-}

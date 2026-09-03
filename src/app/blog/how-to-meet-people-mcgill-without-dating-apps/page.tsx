@@ -137,7 +137,7 @@ export default function Article() {
                 <Link href="/" className="text-sage hover:text-olive underline underline-offset-4">
                   Daisy Weekly
                 </Link>{" "}
-                fill. Instead of swiping, you get one curated match every Wednesday — another
+                fill. Instead of swiping, you get one curated match every Wednesday — another verified
                 student from a Montreal campus, chosen based on your actual preferences and interests.
               </p>
 

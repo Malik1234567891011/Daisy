@@ -126,7 +126,6 @@ function buildBody() {
     select: {
       id: true, firstName: true, email: true,
       phoneNumber: true, phoneVerified: true, smsConsent: true,
-      isTestAccount: true,
     },
   });
 
@@ -279,7 +278,6 @@ function buildBody() {
     for (const u of [row.a, row.b]) {
       if (seen.has(u.id)) continue;
       seen.add(u.id);
-      if (u.isTestAccount) continue;
       if (u.phoneVerified && u.phoneNumber && u.smsConsent) recipients.push(u);
     }
   }

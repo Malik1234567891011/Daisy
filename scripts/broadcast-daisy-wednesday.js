@@ -99,7 +99,6 @@ function sleep(ms) {
       phoneVerified: true,
       phoneNumber: { not: null },
       smsConsent: true,
-      isTestAccount: false,
     },
     select: {
       id: true,

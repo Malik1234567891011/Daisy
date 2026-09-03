@@ -110,8 +110,8 @@ export default function Article() {
                 <Link href="/" className="text-sage hover:text-olive underline underline-offset-4">
                   Daisy Weekly
                 </Link>{" "}
-                is the only dating option in Montreal built exclusively for students. Everyone signs up
-                with a school email and confirms they&apos;re enrolled. There&apos;s no swiping — you get one match every
+                is the only dating option in Montreal built exclusively for students. Every member is
+                verified through their school. There&apos;s no swiping — you get one match every
                 Wednesday, chosen based on your preferences, interests, and campus.
               </p>
 
@@ -133,7 +133,7 @@ export default function Article() {
 
               <p>
                 No dating app is perfect. Tinder gives you volume. Bumble gives women more control.
-                Hinge gives you depth. But if you specifically want to meet other students in
+                Hinge gives you depth. But if you specifically want to meet other verified students in
                 Montreal — without the endless swiping, without the algorithm games — that&apos;s
                 exactly what{" "}
                 <Link href="/onboarding" className="text-sage hover:text-olive underline underline-offset-4">

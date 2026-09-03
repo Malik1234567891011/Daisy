@@ -68,18 +68,9 @@ export default function PrivacyPage() {
                 <p>When you sign up and use Daisy, we may collect:</p>
                 <ul className="list-disc pl-5 space-y-2 marker:text-text-tertiary">
                   <li>Your name</li>
-                  <li>Your school email address, used to sign in</li>
+                  <li>Your school email address (for verification)</li>
                   <li>Your school and major</li>
-                  <li>Your age, and your confirmation that you are 18 or older</li>
-                  <li>
-                    Your confirmation that you are currently enrolled at a
-                    university, college or CEGEP
-                  </li>
-                  <li>
-                    Your mobile number, which we verify by text so we can send
-                    you your weekly match
-                  </li>
-                  <li>Your profile photo, if you add one</li>
+                  <li>Your age</li>
                   <li>
                     Optionally, ethnicity—only if you choose to share it to help
                     us support inclusive matching
@@ -98,11 +89,9 @@ export default function PrivacyPage() {
 
               <Section title="How we use your information">
                 <p>
-                  We use your information to operate Daisy: building your
-                  profile, confirming your mobile number, and suggesting
-                  compatible matches. We rely on what you tell us about your
-                  age and enrollment—we don’t ask for documents and we don’t
-                  independently verify either. Your data is used for matching and
+                  We use your information to operate Daisy: verifying that
+                  you’re a student, building your profile, and suggesting
+                  compatible matches. Your data is used for matching and
                   platform safety—not for selling to data brokers, and not to
                   show you third-party ads. We don’t use what you share on Daisy
                   to train unrelated advertising models.
@@ -115,12 +104,9 @@ export default function PrivacyPage() {
                   both indicate a mutual interest in connecting. Outside of
                   that, we don’t sell your personal information, and we don’t
                   post your profile on public search engines. We may share
-                  limited information with service providers who help us run
-                  the app, under contracts that require them to protect your
-                  data and use it only for those services—currently our hosting
-                  and database providers, Twilio for text messages, and Stripe
-                  if you buy a reroll. Payment card details go directly to
-                  Stripe; Daisy never sees or stores them.
+                  limited information with service providers who help us host
+                  the app or send emails, under strict contracts that require
+                  them to protect your data and use it only for those services.
                 </p>
               </Section>
 
