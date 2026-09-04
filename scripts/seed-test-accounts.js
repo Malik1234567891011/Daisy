@@ -73,45 +73,51 @@ const shared = {
   availability: ["flexible"],
 };
 
+/**
+ * Profiles are applied on update as well as create. An earlier run absorbed a
+ * half-formed row whose firstName was null, and the dashboard greeted the
+ * reviewer as "friend" — re-running should normalise the account, not just
+ * create it.
+ */
+const REVIEWER_PROFILE = {
+  firstName: "Alex",
+  age: 21,
+  gender: "Man",
+  school: "McGill University",
+  major: "Computer Science",
+  intentions: "serious",
+  vibe: "balanced",
+  idealHangout: "coffee",
+  interests: ["Music", "Coffee culture", "Movies"],
+  contactMethod: "instagram",
+  contactValue: "@daisy_test_reviewer",
+};
+
+const PARTNER_PROFILE = {
+  firstName: "Jordan",
+  age: 22,
+  gender: "Woman",
+  school: "Concordia University",
+  major: "Communications",
+  intentions: "serious",
+  vibe: "balanced",
+  idealHangout: "coffee",
+  interests: ["Music", "Coffee culture", "Photography"],
+  contactMethod: "instagram",
+  contactValue: "@daisy_test_partner",
+};
+
 async function main() {
   const reviewer = await prisma.user.upsert({
     where: { email: REVIEWER_EMAIL },
-    update: { ...shared },
-    create: {
-      ...shared,
-      email: REVIEWER_EMAIL,
-      firstName: "Alex",
-      age: 21,
-      gender: "Man",
-      school: "McGill University",
-      major: "Computer Science",
-      intentions: "serious",
-      vibe: "balanced",
-      idealHangout: "coffee",
-      interests: ["Music", "Coffee culture", "Movies"],
-      contactMethod: "instagram",
-      contactValue: "@daisy_test_reviewer",
-    },
+    update: { ...shared, ...REVIEWER_PROFILE },
+    create: { ...shared, ...REVIEWER_PROFILE, email: REVIEWER_EMAIL },
   });
 
   const partner = await prisma.user.upsert({
     where: { email: PARTNER_EMAIL },
-    update: { ...shared },
-    create: {
-      ...shared,
-      email: PARTNER_EMAIL,
-      firstName: "Jordan",
-      age: 22,
-      gender: "Woman",
-      school: "Concordia University",
-      major: "Communications",
-      intentions: "serious",
-      vibe: "balanced",
-      idealHangout: "coffee",
-      interests: ["Music", "Coffee culture", "Photography"],
-      contactMethod: "instagram",
-      contactValue: "@daisy_test_partner",
-    },
+    update: { ...shared, ...PARTNER_PROFILE },
+    create: { ...shared, ...PARTNER_PROFILE, email: PARTNER_EMAIL },
   });
 
   const existing = await prisma.match.findFirst({
