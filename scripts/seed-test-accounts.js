@@ -24,13 +24,25 @@ const ROOT = path.resolve(__dirname, "..");
   if (!fs.existsSync(p)) return;
   fs.readFileSync(p, "utf8").split("\n").forEach((line) => {
     const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)=["']?(.+?)["']?\s*$/);
-    if (m) process.env[m[1]] = m[2];
+    // Fill gaps only. An explicitly exported DATABASE_URL must win: these
+    // files point at a non-production database, and clobbering the caller's
+    // value is how the schema once got applied to the wrong one.
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
   });
 });
 
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
 const prisma = new PrismaClient();
+
+// Say out loud which database is about to be written to. Silence here is
+// what allowed a migration to land on the wrong one.
+try {
+  console.log(`target database host: ${new URL(process.env.DATABASE_URL).host}`);
+} catch {
+  console.error("DATABASE_URL is not set or not parseable.");
+  process.exit(1);
+}
 
 const PASSWORD = "DaisyTest2026!";
 const REVIEWER_EMAIL = "facebooktester@daisyweekly.com";
