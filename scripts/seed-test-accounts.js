@@ -105,6 +105,9 @@ const PARTNER_PROFILE = {
   interests: ["Music", "Coffee culture", "Photography"],
   contactMethod: "instagram",
   contactValue: "@daisy_test_partner",
+  // Synthetic placeholder served from /public. Deliberately not a photograph
+  // of a real person: this profile is fictional and sits on the live site.
+  photoUrl: "/avatars/jordan.svg",
 };
 
 async function main() {
