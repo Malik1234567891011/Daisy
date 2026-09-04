@@ -28,7 +28,8 @@ function walk(dir: string, acc: string[] = []): string[] {
 describe("User queries name their columns", () => {
   test("no select-all query on User anywhere in src/", () => {
     const offenders: string[] = [];
-    const pattern = /prisma\.user\.(findUnique|findFirst|findMany)\(\s*\{(.{0,400}?)\}\s*\)/gs;
+    // [\s\S] rather than the `s` flag: tsconfig targets ES2017.
+    const pattern = /prisma\.user\.(findUnique|findFirst|findMany)\(\s*\{([\s\S]{0,400}?)\}\s*\)/g;
 
     for (const file of walk(join(ROOT, "src"))) {
       const text = readFileSync(file, "utf8");

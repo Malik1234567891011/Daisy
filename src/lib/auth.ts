@@ -73,7 +73,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!user) return null;
 
-        const valid = await bcrypt.compare(password, user.passwordHash);
+        // Exact match first, so nobody's real password changes meaning. Only
+        // if that fails do we retry without surrounding whitespace: pasting a
+        // credential very often picks up a trailing space, and the failure is
+        // indistinguishable from a wrong password. The fallback never locks
+        // anyone out — it only accepts a padded copy of the right password.
+        let valid = await bcrypt.compare(password, user.passwordHash);
+        if (!valid) {
+          const trimmed = password.trim();
+          if (trimmed !== password) {
+            valid = await bcrypt.compare(trimmed, user.passwordHash);
+          }
+        }
         if (!valid) return null;
 
         return { id: user.id, email: user.email, name: user.firstName };
