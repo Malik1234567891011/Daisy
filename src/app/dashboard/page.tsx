@@ -26,11 +26,50 @@ import { RAFFLE, isOpen, type RaffleStanding } from "@/lib/raffle";
  * shows the gap to the next one — a bare total gives no reason to act, and the
  * remainder is the whole point of the referral link sitting beside it.
  */
-function RaffleCard({ standing, loading }: { standing?: RaffleStanding; loading: boolean }) {
+function RaffleCard({
+  standing,
+  loading,
+  compact = false,
+}: {
+  standing?: RaffleStanding;
+  loading: boolean;
+  compact?: boolean;
+}) {
   const entries = standing?.entries ?? 0;
   const entered = entries > 0;
   const toNext = standing?.toNextEntry ?? RAFFLE.referralsPerEntry;
   const got = standing ? standing.qualifiedReferrals % RAFFLE.referralsPerEntry : 0;
+
+  if (compact) {
+    return (
+      <div className="max-w-sm mx-auto mt-8 rounded-xl border border-border-light bg-white/60 px-5 py-3.5">
+        <div className="flex items-center gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-butter-pale/70 text-espresso border border-butter-light/40">
+            <Ticket className="w-4 h-4" strokeWidth={1.8} />
+          </span>
+          <p className="min-w-0 flex-1 text-xs text-text-secondary leading-relaxed">
+            {entered ? (
+              <>
+                Your name is in{" "}
+                <span className="font-medium text-charcoal">
+                  {entries} time{entries === 1 ? "" : "s"}
+                </span>{" "}
+                for {RAFFLE.prizeLabel}.{" "}
+                <span className="text-text-tertiary">
+                  {toNext} more friend{toNext === 1 ? "" : "s"} for another entry.
+                </span>
+              </>
+            ) : (
+              <>Add a photo and verify your number to enter the {RAFFLE.prizeLabel} draw.</>
+            )}{" "}
+            <Link href={RAFFLE.rulesHref} className="font-medium text-sage underline-offset-4 hover:underline">
+              Details
+            </Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card className="flex items-start gap-4">
@@ -1003,6 +1042,14 @@ export default function DashboardPage() {
               setUser((prev) => (prev ? { ...prev, photoUrl: url } : null))
             }
           />
+        )}
+
+        {/* WaitlistDashboard carries the full card. Every other state gets the
+            compact strip, so the draw stays visible once matches drop. */}
+        {!isLoading && isOpen() && (hasMatch || isMutual || showMatchClosedCalm) && (
+          <div className="section-container pb-10">
+            <RaffleCard standing={user?.raffle} loading={false} compact />
+          </div>
         )}
       </main>
       <Footer />
