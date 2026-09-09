@@ -229,6 +229,7 @@ export const FOOTER = {
     legal: [
       { label: "Privacy policy", href: "/privacy" },
       { label: "Terms of service", href: "/terms" },
+      { label: "Giveaway rules", href: "/giveaway" },
     ],
     connect: [
       { label: "Instagram", href: "https://instagram.com/daisyweeklymtl" },

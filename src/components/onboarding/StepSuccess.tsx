@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { RAFFLE, isOpen } from "@/lib/raffle";
 
 const PETAL_ANGLES = [0, 60, 120, 180, 240, 300];
 
@@ -69,6 +70,11 @@ export default function StepSuccess() {
           <p className="cinematic-sub text-text-secondary text-base sm:text-lg mt-3 max-w-xs leading-relaxed">
             We&rsquo;re preparing your first match.
           </p>
+          {isOpen() && (
+            <p className="cinematic-sub text-sm text-sage mt-3 max-w-xs leading-relaxed">
+              You&rsquo;re in the draw for {RAFFLE.prizeBlurb}.
+            </p>
+          )}
         </div>
       </div>
 

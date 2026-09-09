@@ -1,5 +1,6 @@
 import { HERO } from "@/lib/constants";
 import HeroEnroll from "@/components/landing/HeroEnroll";
+import { RAFFLE, isOpen } from "@/lib/raffle";
 import SchoolMarquee from "@/components/landing/SchoolMarquee";
 
 /**
@@ -68,6 +69,26 @@ export default function Hero() {
             <SchoolMarquee />
             <p className="mt-2.5 text-[15px] text-ivory/60">{HERO.schoolsNote}</p>
           </div>
+
+          {isOpen() && (
+            /* Someone arriving from the giveaway post needs to see the same
+               promise within a second or they assume they mis-tapped. */
+            <div
+              className="enter mt-6 flex justify-center"
+              style={{ "--enter-delay": "540ms" } as React.CSSProperties}
+            >
+              <a
+                href={RAFFLE.rulesHref}
+                className="inline-flex items-center gap-2 rounded-full border border-ivory/25 bg-ink/25 px-4 py-2 text-[13px] text-ivory/90 backdrop-blur-sm transition-colors hover:bg-ink/40"
+              >
+                <span aria-hidden="true">🌼</span>
+                <span>
+                  Sign up for a shot at {RAFFLE.prizeBlurb}
+                </span>
+                <span className="text-ivory/50">→</span>
+              </a>
+            </div>
+          )}
 
           <div
             className="enter mt-6"
