@@ -3,26 +3,13 @@
 import { useState, useCallback } from "react";
 import { Phone } from "lucide-react";
 import Button from "@/components/ui/Button";
+import { normalizePhone, formatPhoneDisplay } from "@/lib/phone";
 
 interface StepPhoneProps {
   phone: string;
   onPhoneChange: (phone: string) => void;
   onCodeSent: () => void;
   onBack: () => void;
-}
-
-function formatDisplay(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
-  if (digits.length <= 1) return digits.length === 1 ? `+${digits}` : "";
-  if (digits.length <= 4) return `+${digits.slice(0, 1)} (${digits.slice(1)}`;
-  if (digits.length <= 7)
-    return `+${digits.slice(0, 1)} (${digits.slice(1, 4)}) ${digits.slice(4)}`;
-  return `+${digits.slice(0, 1)} (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7, 11)}`;
-}
-
-function toE164(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
-  return `+${digits}`;
 }
 
 export default function StepPhone({
@@ -44,9 +31,9 @@ export default function StepPhone({
   );
 
   const handleSend = useCallback(async () => {
-    const e164 = toE164(phone);
-    if (e164.length < 8) {
-      setError("Enter a valid phone number with country code");
+    const e164 = normalizePhone(phone);
+    if (!e164) {
+      setError("Enter a valid phone number, e.g. (514) 266-0119");
       return;
     }
 
@@ -71,8 +58,7 @@ export default function StepPhone({
     }
   }, [phone, onCodeSent]);
 
-  const digits = phone.replace(/\D/g, "");
-  const isValid = digits.length >= 8;
+  const isValid = normalizePhone(phone) !== null;
 
   return (
     <div className="pt-4 md:pt-8">
@@ -101,7 +87,7 @@ export default function StepPhone({
           inputMode="tel"
           autoComplete="tel"
           placeholder="+1 (514) 555-1234"
-          value={phone ? formatDisplay(phone) : ""}
+          value={formatPhoneDisplay(phone)}
           onChange={handleChange}
           className="w-full rounded-xl border border-border bg-white px-4 py-3.5 text-base text-text-primary placeholder:text-text-tertiary/50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-sage-light/60 focus:border-sage hover:border-border/80"
         />

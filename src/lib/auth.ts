@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { normalizePhone } from "@/lib/phone";
 
 /**
  * Exactly the columns authorize() reads.
@@ -31,14 +32,6 @@ function isEmail(identifier: string): boolean {
   return identifier.includes("@");
 }
 
-function toE164(identifier: string): string | null {
-  const digits = identifier.replace(/[\s\-().]/g, "");
-  if (/^\+[1-9]\d{6,14}$/.test(digits)) return digits;
-  if (/^\d{10}$/.test(digits)) return `+1${digits}`;
-  if (/^1\d{10}$/.test(digits)) return `+${digits}`;
-  return null;
-}
-
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
@@ -60,7 +53,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             select: AUTH_SELECT,
           });
         } else {
-          const phoneNumber = toE164(identifier);
+          const phoneNumber = normalizePhone(identifier);
           if (!phoneNumber) return null;
           user = await prisma.user.findUnique({
             where: { phoneNumber },

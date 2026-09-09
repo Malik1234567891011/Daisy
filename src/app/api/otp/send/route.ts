@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { normalizePhone } from "@/lib/phone";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 const client = twilio(
@@ -10,7 +11,6 @@ const client = twilio(
 );
 const VERIFY_SID = process.env.TWILIO_VERIFY_SERVICE_SID!;
 
-const E164_RE = /^\+[1-9]\d{6,14}$/;
 
 
 export async function POST(req: NextRequest) {
@@ -29,9 +29,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const normalized = phone.replace(/[\s\-()]/g, "");
+    const normalized = normalizePhone(phone);
 
-    if (!E164_RE.test(normalized)) {
+    if (!normalized) {
       return NextResponse.json(
         { error: "Enter a valid phone number with country code (e.g. +15141234567)" },
         { status: 400 },
