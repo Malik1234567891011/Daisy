@@ -94,8 +94,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ verified: true });
   } catch (err: unknown) {
     console.error("OTP verify error:", err);
-    const message =
-      err instanceof Error ? err.message : "Verification failed";
+    // Twilio's raw text leaks internals to the user ("Invalid parameter
+    // `To`: +5148341887"). Log it, show something actionable.
+    console.error("twilio error", err);
+    const message = "Couldn't verify that code. Please try again.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

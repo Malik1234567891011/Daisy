@@ -32,6 +32,11 @@ export default function StepPhone({
 
   const handleSend = useCallback(async () => {
     const e164 = normalizePhone(phone);
+    if (e164) {
+      // Hand the parent the canonical form. StepOTP reads this same value, and
+      // an autofilled field leaves it as bare digits otherwise.
+      onPhoneChange(e164);
+    }
     if (!e164) {
       setError("Enter a valid phone number, e.g. (514) 266-0119");
       return;

@@ -57,3 +57,29 @@ describe("formatPhoneDisplay", () => {
     assert.equal(formatPhoneDisplay("+442071838750"), "+442071838750");
   });
 });
+
+describe("repairs a number that lost its country code", () => {
+  test("the exact shape that broke verification in production", () => {
+    // Reported live: "Invalid parameter `To`: +5148341887". An older client
+    // prepended a bare "+" to autofilled digits; Twilio rejects it.
+    assert.equal(normalizePhone("+5148341887"), "+15148341887");
+    assert.equal(normalizePhone("+5142660119"), "+15142660119");
+    assert.equal(normalizePhone("+4389230914"), "+14389230914");
+  });
+
+  test("does not touch genuine international numbers", () => {
+    assert.equal(normalizePhone("+33612345678"), "+33612345678");
+    assert.equal(normalizePhone("+442071838750"), "+442071838750");
+    assert.equal(normalizePhone("+4916096520329"), "+4916096520329");
+    assert.equal(normalizePhone("+525531455981"), "+525531455981");
+  });
+
+  test("only repairs real NANP shape — area code and exchange cannot start 0 or 1", () => {
+    assert.equal(normalizePhone("+1234567890"), "+1234567890"); // area code starts 1: left alone
+    assert.equal(normalizePhone("+0123456789"), null);
+  });
+
+  test("autofill path: bare digits and the +-prefixed form agree", () => {
+    assert.equal(normalizePhone("5148341887"), normalizePhone("+5148341887"));
+  });
+});

@@ -84,8 +84,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ sent: true });
   } catch (err: unknown) {
     console.error("OTP send error:", err);
-    const message =
-      err instanceof Error ? err.message : "Failed to send code";
+    // Twilio's raw text leaks internals to the user ("Invalid parameter
+    // `To`: +5148341887"). Log it, show something actionable.
+    console.error("twilio error", err);
+    const message = "Couldn't send the code. Please check the number and try again.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

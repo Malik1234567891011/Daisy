@@ -11,6 +11,12 @@
  * treated as the caller supplying their own country code.
  */
 
+/**
+ * North American local shape: NXX-NXX-XXXX, where neither the area code nor
+ * the exchange may begin with 0 or 1.
+ */
+const NANP_LOCAL = /^[2-9]\d{2}[2-9]\d{6}$/;
+
 /** E.164 for a number we can actually send to, or null if it isn't one. */
 export function normalizePhone(raw: string | null | undefined): string | null {
   const cleaned = (raw ?? "").trim();
@@ -19,14 +25,20 @@ export function normalizePhone(raw: string | null | undefined): string | null {
   const digits = cleaned.replace(/\D/g, "");
   if (!digits) return null;
 
-  // An explicit "+" means the country code is already there.
+  // An explicit "+" usually means the country code is already there — but not
+  // always. A "+" followed by exactly ten digits in North American shape is a
+  // local number that lost its 1, which is what an older build of the client
+  // produced (+5148341887). Twilio rejects those outright, so repair rather
+  // than forward: no country code is a bare 10 digits in NANP shape, and a
+  // cached browser bundle will keep sending them for a while yet.
   if (cleaned.startsWith("+")) {
+    if (NANP_LOCAL.test(digits)) return `+1${digits}`;
     const e164 = `+${digits}`;
     return /^\+[1-9]\d{7,14}$/.test(e164) ? e164 : null;
   }
 
   // Bare North American forms.
-  if (/^\d{10}$/.test(digits)) return `+1${digits}`;
+  if (NANP_LOCAL.test(digits)) return `+1${digits}`;
   if (/^1\d{10}$/.test(digits)) return `+${digits}`;
 
   return null;
