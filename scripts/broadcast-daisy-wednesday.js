@@ -46,6 +46,16 @@ var BASE_URL = (
 var SUPPORT = process.env.BROADCAST_SUPPORT_EMAIL || "hello@joindaisy.com";
 
 /** Override with env: {{URL}} = site root, {{DASHBOARD}} = /dashboard, {{EMAIL}} = support */
+/**
+ * {{NAME}} is filled per recipient. A blast that opens with the reader's own
+ * name reads like a message; one that opens "Hi everyone" reads like a list.
+ * Falls back to "there" so a missing first name never leaves a hole.
+ */
+function personalise(body, user) {
+  var name = (user && user.firstName ? String(user.firstName).trim() : "") || "there";
+  return body.replace(/\{\{NAME\}\}/g, name);
+}
+
 function buildBody() {
   var dash = BASE_URL + "/dashboard";
   var custom = process.env.BROADCAST_BODY;
@@ -117,9 +127,21 @@ function sleep(ms) {
   console.log("Site link base:", BASE_URL);
   console.log("Support email in text:", SUPPORT);
   console.log("Recipients (verified + phone + SMS consent):", users.length);
-  console.log("\n--- Message body ---\n");
-  console.log(BODY);
-  console.log("\n--- Length ---\n", BODY.length, "chars (may split into multiple SMS segments)\n");
+  console.log("\n--- Message body (as the first recipient will see it) ---\n");
+  var sample = personalise(BODY, users[0]);
+  console.log(sample);
+  // Any non-GSM-7 character (an emoji, a curly quote) switches the whole
+  // message to UCS-2, which drops the segment size from 160 chars to 70.
+  var unicode = /[^\u0000-\u007F\u00A0-\u00FF\u20AC]/.test(sample);
+  var seg = unicode ? 67 : 153;
+  console.log(
+    "\n--- Length ---\n",
+    sample.length,
+    "chars |",
+    unicode ? "unicode (emoji) -> 70-char segments" : "GSM-7 -> 160-char segments",
+    "| ~" + Math.ceil(sample.length / seg) + " segments each",
+    "| ~" + (Math.ceil(sample.length / seg) * users.length) + " segments total\n",
+  );
 
   if (users.length <= 10) {
     users.forEach(function (u) {
@@ -149,7 +171,7 @@ function sleep(ms) {
       var msg = await client.messages.create({
         to: u.phoneNumber,
         from: from,
-        body: BODY,
+        body: personalise(BODY, u),
       });
       ok++;
       console.log("OK", u.phoneNumber, msg.sid);
