@@ -61,7 +61,7 @@ export default function StepPhone({
     } finally {
       setSending(false);
     }
-  }, [phone, onCodeSent]);
+  }, [phone, onCodeSent, onPhoneChange]);
 
   const isValid = normalizePhone(phone) !== null;
 
