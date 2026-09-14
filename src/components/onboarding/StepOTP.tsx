@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button";
 
 interface StepOTPProps {
   phone: string;
+  smsConsent: boolean;
   onVerified: () => void;
   onBack: () => void;
 }
@@ -13,7 +14,7 @@ interface StepOTPProps {
 const CODE_LENGTH = 6;
 const RESEND_COOLDOWN = 30;
 
-export default function StepOTP({ phone, onVerified, onBack }: StepOTPProps) {
+export default function StepOTP({ phone, smsConsent, onVerified, onBack }: StepOTPProps) {
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(""));
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
@@ -44,7 +45,7 @@ export default function StepOTP({ phone, onVerified, onBack }: StepOTPProps) {
         const res = await fetch("/api/otp/verify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: toE164(phone), code }),
+          body: JSON.stringify({ phone: toE164(phone), code, smsConsent }),
         });
 
         const data = await res.json();
@@ -59,7 +60,7 @@ export default function StepOTP({ phone, onVerified, onBack }: StepOTPProps) {
         setVerifying(false);
       }
     },
-    [phone, onVerified],
+    [phone, smsConsent, onVerified],
   );
 
   const handleChange = useCallback(
@@ -167,7 +168,14 @@ export default function StepOTP({ phone, onVerified, onBack }: StepOTPProps) {
       </p>
 
       {/* OTP inputs */}
-      <div className="flex justify-center gap-2.5 sm:gap-3 mb-3" onPaste={handlePaste}>
+      {/* A grid, not a centred row of fixed widths: six w-12 boxes plus gaps
+          measure ~338px and the panel's interior is ~250px on a phone, so the
+          row used to hang off both edges of the card. Columns divide whatever
+          width there is instead. */}
+      <div
+        className="grid grid-cols-6 gap-2 sm:gap-3 mb-3"
+        onPaste={handlePaste}
+      >
         {digits.map((digit, i) => (
           <input
             key={i}
@@ -181,7 +189,7 @@ export default function StepOTP({ phone, onVerified, onBack }: StepOTPProps) {
             onKeyDown={(e) => handleKeyDown(i, e)}
             disabled={verifying}
             aria-label={`Digit ${i + 1}`}
-            className="w-12 h-14 sm:w-14 sm:h-16 text-center text-xl sm:text-2xl font-display rounded-xl border border-border bg-white text-charcoal transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sage-light/60 focus:border-sage disabled:opacity-50"
+            className="w-full min-w-0 h-[52px] sm:h-16 text-center text-xl sm:text-2xl font-display rounded-[12px] border border-border bg-white text-charcoal transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sage-light/60 focus:border-sage disabled:opacity-50"
           />
         ))}
       </div>

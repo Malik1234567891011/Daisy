@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { phone, code } = await req.json();
+    const { phone, code, smsConsent } = await req.json();
 
     if (!phone || typeof phone !== "string") {
       return NextResponse.json(
@@ -88,6 +88,9 @@ export async function POST(req: NextRequest) {
         phoneVerified: true,
         verifiedAt: new Date(),
         onboardingComplete: true,
+        // The checkbox on the phone step. Absent means an older client that
+        // still showed it pre-checked, so keep the old default.
+        smsConsent: typeof smsConsent === "boolean" ? smsConsent : true,
       },
     });
 

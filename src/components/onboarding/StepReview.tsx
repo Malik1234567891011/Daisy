@@ -113,7 +113,12 @@ export default function StepReview({
           <SectionHeader title="About you" step={5} goToStep={goToStep} />
           <InfoRow label="Looking for" value={getLabel(INTENTIONS, personality.intentions)} />
           <InfoRow label="Social energy" value={getLabel(VIBES, personality.vibe)} />
-          <InfoRow label="Ideal hangout" value={getLabel(IDEAL_HANGOUTS, personality.idealHangout)} />
+          <InfoRow
+            label={personality.idealHangouts.length > 1 ? "Ideal hangouts" : "Ideal hangout"}
+            value={personality.idealHangouts
+              .map((h) => getLabel(IDEAL_HANGOUTS, h))
+              .join(", ")}
+          />
           {personality.interests.length > 0 && (
             <div className="py-1.5">
               <span className="text-sm text-text-tertiary">Interests</span>

@@ -1,18 +1,33 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
-import Button from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import DaisyLogo from "@/components/layout/DaisyLogo";
+import AuthShell from "@/components/auth/AuthShell";
+import {
+  AuthAltButton,
+  AuthDivider,
+  AuthField,
+  AuthPanel,
+  AuthSubmit,
+} from "@/components/auth/AuthPanel";
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
+/**
+ * Three screens in the same card as sign-in: the email, the six-digit code
+ * texted to the verified phone, then the new password. The chevron walks back
+ * one screen at a time; from the first it returns to sign-in.
+ */
 type Step = "email" | "code" | "password";
+
+const TITLES: Record<Step, string> = {
+  email: "Forgot password",
+  code: "Check your phone",
+  password: "New password",
+};
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -26,14 +41,38 @@ export default function ForgotPasswordPage() {
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function handleEmailSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  const codeRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+
+  // Each screen has one field; landing on it unfocused reads as a dead end.
+  useEffect(() => {
+    if (step === "code") codeRef.current?.focus();
+    if (step === "password") passwordRef.current?.focus();
+  }, [step]);
+
+  function clearErrors() {
     setFieldError("");
     setFormError("");
+  }
+
+  function goTo(next: Step) {
+    clearErrors();
+    setStep(next);
+  }
+
+  async function handleEmailSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    clearErrors();
 
     const trimmed = email.trim();
-    if (!trimmed) { setFieldError("Email is required"); return; }
-    if (!isValidEmail(trimmed)) { setFieldError("Please enter a valid email address"); return; }
+    if (!trimmed) {
+      setFieldError("Enter your school email");
+      return;
+    }
+    if (!isValidEmail(trimmed)) {
+      setFieldError("That doesn’t look like an email address");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -43,12 +82,10 @@ export default function ForgotPasswordPage() {
         body: JSON.stringify({ email: trimmed.toLowerCase() }),
       });
       const data = await res.json();
-
       if (!res.ok) {
         setFormError(typeof data.error === "string" ? data.error : "Something went wrong");
         return;
       }
-
       setStep("code");
     } catch {
       setFormError("Something went wrong. Please try again.");
@@ -57,23 +94,19 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  async function handleCodeSubmit(e: FormEvent<HTMLFormElement>) {
+  function handleCodeSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setFieldError("");
-    setFormError("");
-
-    if (!code || !/^\d{6}$/.test(code.trim())) {
-      setFieldError("Enter a valid 6-digit code");
+    clearErrors();
+    if (!/^\d{6}$/.test(code.trim())) {
+      setFieldError("Enter the 6-digit code");
       return;
     }
-
     setStep("password");
   }
 
   async function handlePasswordSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setFieldError("");
-    setFormError("");
+    clearErrors();
 
     if (password.length < 8) {
       setFieldError("Password must be at least 8 characters");
@@ -92,16 +125,16 @@ export default function ForgotPasswordPage() {
         }),
       });
       const data = await res.json();
-
       if (!res.ok) {
-        if (typeof data.error === "string" && data.error.toLowerCase().includes("code")) {
-          setStep("code");
+        const message = typeof data.error === "string" ? data.error : "Something went wrong";
+        // A bad or expired code is fixed on the code screen, not this one.
+        if (message.toLowerCase().includes("code")) {
           setCode("");
+          setStep("code");
         }
-        setFormError(typeof data.error === "string" ? data.error : "Something went wrong");
+        setFormError(message);
         return;
       }
-
       router.push("/login?reset=success");
     } catch {
       setFormError("Something went wrong. Please try again.");
@@ -110,126 +143,145 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  const subtitle =
+  const back =
     step === "email"
-      ? "Enter your email and we\u2019ll text a code to your verified phone."
+      ? { backHref: "/login", backLabel: "Back to sign in" }
       : step === "code"
-        ? "Enter the 6-digit code we just sent."
-        : "Choose a new password.";
+        ? { onBack: () => goTo("email"), backLabel: "Back to email" }
+        : { onBack: () => goTo("code"), backLabel: "Back to code" };
 
   return (
-    <div
-      className={cn(
-        "min-h-screen bg-ivory bg-grain px-4 py-12",
-        "flex flex-col items-center justify-center",
-      )}
+    <AuthShell
+      title={TITLES[step]}
+      {...back}
+      footer={
+        <>
+          Remembered it?{" "}
+          <Link
+            href="/login"
+            className="text-ivory underline underline-offset-4 transition-opacity hover:opacity-80"
+          >
+            Sign in
+          </Link>
+        </>
+      }
     >
-      <div className="flex w-full max-w-sm flex-col items-center gap-10">
-        <DaisyLogo size="md" className="shrink-0" />
+      <AuthPanel>
+        {step === "email" ? (
+          <form onSubmit={handleEmailSubmit} noValidate>
+            <AuthField
+              label="School email"
+              type="email"
+              name="email"
+              inputMode="email"
+              autoComplete="email"
+              autoFocus
+              placeholder="you@mail.mcgill.ca"
+              value={email}
+              error={fieldError}
+              disabled={isSubmitting}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (fieldError || formError) clearErrors();
+              }}
+            />
+            {!fieldError ? (
+              <p className="mt-2 text-[13px] text-white/45">
+                We’ll text a code to the phone you verified.
+              </p>
+            ) : null}
+            {formError ? (
+              <p className="mt-3 text-[13px] text-error" role="alert">
+                {formError}
+              </p>
+            ) : null}
+            <div className="mt-7">
+              <AuthSubmit type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Sending…" : "Send code"}
+              </AuthSubmit>
+            </div>
+          </form>
+        ) : null}
 
-        <div className="w-full rounded-2xl bg-white p-8 sm:p-10 shadow-card border border-border-light/60">
-          <div className="mb-9 text-center">
-            <h1 className="font-display text-2xl text-charcoal">
-              {step === "password" ? "Set a new password" : "Forgot password"}
-            </h1>
-            <p className="mt-2.5 text-sm text-text-secondary">{subtitle}</p>
-          </div>
+        {step === "code" ? (
+          <form onSubmit={handleCodeSubmit} noValidate>
+            <AuthField
+              ref={codeRef}
+              label="6-digit code"
+              type="text"
+              name="code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="000000"
+              maxLength={6}
+              value={code}
+              error={fieldError}
+              disabled={isSubmitting}
+              className="tracking-[0.3em]"
+              onChange={(e) => {
+                setCode(e.target.value.replace(/\D/g, "").slice(0, 6));
+                if (fieldError || formError) clearErrors();
+              }}
+            />
+            {!fieldError ? (
+              <div className="mt-2 text-[13px] text-white/45">
+                <p className="truncate text-white/60">{email.trim()}</p>
+                <p>If that account has a verified phone, the code is on its way.</p>
+              </div>
+            ) : null}
+            {formError ? (
+              <p className="mt-3 text-[13px] text-error" role="alert">
+                {formError}
+              </p>
+            ) : null}
+            <div className="mt-7">
+              <AuthSubmit type="submit" disabled={isSubmitting}>
+                Continue
+              </AuthSubmit>
+            </div>
+            <AuthDivider />
+            <AuthAltButton
+              type="button"
+              onClick={() => {
+                setCode("");
+                goTo("email");
+              }}
+            >
+              Didn’t get it? Try another email
+            </AuthAltButton>
+          </form>
+        ) : null}
 
-          {step === "email" && (
-            <form onSubmit={handleEmailSubmit} className="space-y-5" noValidate>
-              <Input
-                label="Email"
-                type="email"
-                name="email"
-                autoComplete="email"
-                placeholder="you@mail.mcgill.ca"
-                value={email}
-                error={fieldError}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (fieldError) setFieldError("");
-                  if (formError) setFormError("");
-                }}
-                disabled={isSubmitting}
-              />
-              {formError && (
-                <p className="text-[13px] text-error" role="alert">{formError}</p>
-              )}
-              <Button type="submit" variant="primary" size="lg" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Sending\u2026" : "Send code"}
-              </Button>
-            </form>
-          )}
-
-          {step === "code" && (
-            <form onSubmit={handleCodeSubmit} className="space-y-5" noValidate>
-              <Input
-                label="6-digit code"
-                type="text"
-                name="code"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="000000"
-                maxLength={6}
-                value={code}
-                error={fieldError}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/\D/g, "").slice(0, 6);
-                  setCode(v);
-                  if (fieldError) setFieldError("");
-                  if (formError) setFormError("");
-                }}
-                disabled={isSubmitting}
-              />
-              {formError && (
-                <p className="text-[13px] text-error" role="alert">{formError}</p>
-              )}
-              <Button type="submit" variant="primary" size="lg" className="w-full" disabled={isSubmitting}>
-                Verify code
-              </Button>
-              <button
-                type="button"
-                className="w-full text-sm text-text-tertiary hover:text-sage transition-colors"
-                onClick={() => { setStep("email"); setCode(""); setFormError(""); setFieldError(""); }}
-              >
-                Didn&rsquo;t get it? Go back
-              </button>
-            </form>
-          )}
-
-          {step === "password" && (
-            <form onSubmit={handlePasswordSubmit} className="space-y-5" noValidate>
-              <Input
-                label="New password"
-                type="password"
-                name="password"
-                autoComplete="new-password"
-                placeholder="At least 8 characters"
-                value={password}
-                error={fieldError}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (fieldError) setFieldError("");
-                  if (formError) setFormError("");
-                }}
-                disabled={isSubmitting}
-              />
-              {formError && (
-                <p className="text-[13px] text-error" role="alert">{formError}</p>
-              )}
-              <Button type="submit" variant="primary" size="lg" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Saving\u2026" : "Save new password"}
-              </Button>
-            </form>
-          )}
-
-          <p className="mt-8 text-center text-sm text-text-tertiary">
-            <Link href="/login" className="text-sage transition-colors duration-200 hover:text-olive">
-              Back to sign in
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
+        {step === "password" ? (
+          <form onSubmit={handlePasswordSubmit} noValidate>
+            <AuthField
+              ref={passwordRef}
+              label="New password"
+              type="password"
+              name="password"
+              autoComplete="new-password"
+              placeholder="at least 8 characters"
+              value={password}
+              error={fieldError}
+              disabled={isSubmitting}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (fieldError || formError) clearErrors();
+              }}
+            />
+            {formError ? (
+              <p className="mt-3 text-[13px] text-error" role="alert">
+                {formError}
+              </p>
+            ) : null}
+            <div className="mt-7">
+              <AuthSubmit type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Saving…" : "Save new password"}
+              </AuthSubmit>
+            </div>
+          </form>
+        ) : null}
+      </AuthPanel>
+    </AuthShell>
   );
 }

@@ -79,6 +79,14 @@ export default function StepInterests({
     onPersonalityChange({ interests: updated });
   };
 
+  const toggleHangout = (value: string) => {
+    const current = personality.idealHangouts;
+    const updated = current.includes(value)
+      ? current.filter((h) => h !== value)
+      : [...current, value];
+    onPersonalityChange({ idealHangouts: updated });
+  };
+
   const toggleAvailability = (slot: string) => {
     const current = personality.availability;
     const updated = current.includes(slot)
@@ -89,7 +97,7 @@ export default function StepInterests({
 
   const canContinue =
     personality.interests.length >= 2 &&
-    personality.idealHangout &&
+    personality.idealHangouts.length >= 1 &&
     personality.availability.length >= 1;
 
   const handleNext = () => {
@@ -130,21 +138,22 @@ export default function StepInterests({
       {/* Ideal hangout */}
       <div className="mb-8">
         <label className="block text-sm font-medium text-text-primary mb-3">
-          Ideal first hangout?
+          Ideal first hangout?{" "}
+          <span className="text-text-tertiary font-normal">(pick any)</span>
         </label>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {IDEAL_HANGOUTS.map((opt) => (
             <OptionCard
               key={opt.value}
-              selected={personality.idealHangout === opt.value}
-              onClick={() => onPersonalityChange({ idealHangout: opt.value })}
+              selected={personality.idealHangouts.includes(opt.value)}
+              onClick={() => toggleHangout(opt.value)}
               emoji={opt.emoji}
               label={opt.label}
             />
           ))}
         </div>
-        {touched && !personality.idealHangout && (
-          <p className="text-sm text-error mt-2">Pick one</p>
+        {touched && personality.idealHangouts.length < 1 && (
+          <p className="text-sm text-error mt-2">Pick at least one</p>
         )}
       </div>
 

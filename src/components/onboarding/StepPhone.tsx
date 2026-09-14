@@ -7,6 +7,8 @@ import Button from "@/components/ui/Button";
 interface StepPhoneProps {
   phone: string;
   onPhoneChange: (phone: string) => void;
+  smsConsent: boolean;
+  onSmsConsentChange: (consent: boolean) => void;
   onCodeSent: () => void;
   onBack: () => void;
 }
@@ -28,6 +30,8 @@ function toE164(raw: string): string {
 export default function StepPhone({
   phone,
   onPhoneChange,
+  smsConsent,
+  onSmsConsentChange,
   onCodeSent,
   onBack,
 }: StepPhoneProps) {
@@ -108,19 +112,21 @@ export default function StepPhone({
       </div>
 
       <p className="text-xs text-text-tertiary mb-4">
-        We&rsquo;ll use this number to send match alerts and important Daisy updates.
-        Standard message rates may apply.
+        The verification code is a one-off. Standard message rates may apply.
       </p>
 
+      {/* Real consent: controlled, stored on verify, and honoured by every
+          text we send. Turning it off later lives on the profile page. */}
       <label className="flex items-start gap-2.5 mb-8 cursor-pointer">
         <input
           type="checkbox"
-          defaultChecked
+          checked={smsConsent}
+          onChange={(e) => onSmsConsentChange(e.target.checked)}
           className="mt-0.5 h-4 w-4 rounded border-border text-sage focus:ring-sage-light/60 accent-sage"
         />
         <span className="text-xs text-text-secondary leading-relaxed">
-          I agree to receive SMS notifications for match drops and important updates from Daisy.
-          You can opt out anytime.
+          Text me when my match drops and when it&rsquo;s mutual. You can turn
+          this off anytime from your profile.
         </span>
       </label>
 
@@ -141,7 +147,7 @@ export default function StepPhone({
           disabled={!isValid || sending}
           className="flex-1"
         >
-          {sending ? "Sending\u2026" : "Send code"}
+          {sending ? "Sending…" : "Send code"}
         </Button>
       </div>
     </div>

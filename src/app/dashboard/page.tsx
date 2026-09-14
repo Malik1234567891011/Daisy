@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import ProfilePhotoPicker from "@/components/profile/ProfilePhotoPicker";
 import { INTENTIONS, VIBES, IDEAL_HANGOUTS } from "@/lib/constants";
+import { parseIdealHangouts } from "@/lib/idealHangouts";
 import { formatRerollPrice } from "@/lib/billing";
 
 /* ─── Types ─── */
@@ -62,7 +63,16 @@ type MatchData = {
   dropDate?: string;
   partner?: MatchPartner;
   suggestedSpot?: MeetingSpot | null;
-  closedMatch?: { youDeclined: boolean };
+  closedMatch?: { youDeclined: boolean; reason?: ClosedReason };
+};
+
+type ClosedReason = "you-declined" | "they-declined" | "rerolled";
+
+type RerollProps = {
+  onReroll: () => void;
+  rerolling: boolean;
+  rerollError: string | null;
+  hasRerollCredit: boolean;
 };
 
 /* ─── Helpers ─── */
@@ -148,14 +158,68 @@ function PulsingDot() {
   );
 }
 
+/* ─── Paid reroll (shared by the match card and the closed-match screen) ─── */
+function RerollCard({
+  title,
+  body,
+  onReroll,
+  rerolling,
+  rerollError,
+  hasRerollCredit,
+}: { title: string; body: string } & RerollProps) {
+  return (
+    <div className="max-w-sm mx-auto mt-8">
+      <div className="rounded-xl border border-border-light bg-white/60 px-5 py-4">
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-butter-pale/70 text-espresso border border-butter-light/40">
+            <Shuffle className="w-4 h-4" strokeWidth={1.8} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-charcoal">{title}</p>
+            <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">{body}</p>
+            <button
+              type="button"
+              onClick={onReroll}
+              disabled={rerolling}
+              className={cn(
+                "mt-3 inline-flex items-center gap-1.5 text-sm font-medium",
+                "text-sage hover:text-olive transition-colors disabled:opacity-50",
+              )}
+            >
+              {rerolling
+                ? "Finding someone new\u2026"
+                : hasRerollCredit
+                  ? "Use your reroll"
+                  : `Reroll for ${formatRerollPrice()}`}
+            </button>
+            {rerollError && (
+              <p className="mt-2 text-xs text-error" role="alert">
+                {rerollError}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Match closed (calm retention, not rejection drama) ─── */
+const CLOSED_COPY: Record<ClosedReason, string> = {
+  "you-declined": "You passed on this one.",
+  "they-declined": "they weren\u2019t interested this time.",
+  // Their partner paid to swap. Nobody needs to hear that.
+  rerolled: "this one didn\u2019t pan out.",
+};
+
 function MatchClosedDashboard({
-  youDeclined,
+  reason,
   onBackToDashboard,
+  ...reroll
 }: {
-  youDeclined: boolean;
+  reason: ClosedReason;
   onBackToDashboard: () => void;
-}) {
+} & RerollProps) {
   const nextDrop = useMemo(() => getNextDropDate(), []);
   const countdown = useSecondsCountdown(nextDrop);
 
@@ -166,23 +230,11 @@ function MatchClosedDashboard({
           this match didn&rsquo;t work out
         </h1>
         <p className="mt-4 text-text-secondary leading-relaxed text-[15px] sm:text-base">
-          {youDeclined ? (
-            <>
-              You passed on this one.
-              <br />
-              <span className="text-text-tertiary">
-                no worries &mdash; you&rsquo;ll get a new match next wednesday.
-              </span>
-            </>
-          ) : (
-            <>
-              they weren&rsquo;t interested this time.
-              <br />
-              <span className="text-text-tertiary">
-                no worries &mdash; you&rsquo;ll get a new match next wednesday.
-              </span>
-            </>
-          )}
+          {CLOSED_COPY[reason]}
+          <br />
+          <span className="text-text-tertiary">
+            no worries &mdash; you&rsquo;ll get a new match next wednesday.
+          </span>
         </p>
       </section>
 
@@ -211,7 +263,15 @@ function MatchClosedDashboard({
         </div>
       </Card>
 
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4">
+      {/* The person who just passed is the one most likely to pay for a
+          new match. Keep the offer in front of them. */}
+      <RerollCard
+        title="Don’t want to wait?"
+        body="Get a new match right now instead of waiting for Wednesday."
+        {...reroll}
+      />
+
+      <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4">
         <Button
           type="button"
           size="lg"
@@ -424,24 +484,21 @@ function MatchDashboard({
   match,
   onDecision,
   deciding,
-  onReroll,
-  rerolling,
-  rerollError,
-  hasRerollCredit,
+  ...reroll
 }: {
   match: MatchData;
   onDecision: (d: "INTERESTED" | "DECLINED") => void;
   deciding: boolean;
-  onReroll: () => void;
-  rerolling: boolean;
-  rerollError: string | null;
-  hasRerollCredit: boolean;
-}) {
+} & RerollProps) {
   const partner = match.partner!;
+  // "Not for me" is one tap from losing the week, so it asks once.
+  const [confirmPass, setConfirmPass] = useState(false);
   const tags = [
     partner.intentions && getLabel(INTENTIONS, partner.intentions),
     partner.vibe && getLabel(VIBES, partner.vibe),
-    partner.idealHangout && getLabel(IDEAL_HANGOUTS, partner.idealHangout),
+    ...parseIdealHangouts(partner.idealHangout).map((h) =>
+      getLabel(IDEAL_HANGOUTS, h),
+    ),
   ].filter(Boolean);
 
   const alreadyDecided = match.myDecision === "INTERESTED";
@@ -484,12 +541,42 @@ function MatchDashboard({
           </div>
         )}
 
-        {!alreadyDecided ? (
+        {alreadyDecided ? (
+          <div className="mt-6 rounded-xl bg-sage-pale/30 border border-sage-light/30 px-4 py-3 text-center">
+            <p className="text-sm font-medium text-sage">You said you&rsquo;re interested</p>
+            <p className="text-xs text-text-tertiary mt-1">We&rsquo;ll text you if they feel the same&hellip;</p>
+          </div>
+        ) : confirmPass ? (
+          <div className="mt-6 rounded-xl border border-border-light bg-cream/40 px-4 py-3">
+            <p className="text-sm text-charcoal">
+              Pass on {partner.firstName ?? "this match"}? You won&rsquo;t get
+              another match until Wednesday unless you reroll.
+            </p>
+            <div className="flex gap-3 mt-3">
+              <Button
+                variant="ghost"
+                onClick={() => setConfirmPass(false)}
+                disabled={deciding}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => onDecision("DECLINED")}
+                disabled={deciding}
+                className="flex-1"
+              >
+                Yes, pass
+              </Button>
+            </div>
+          </div>
+        ) : (
           <div className="flex gap-3 mt-6">
             <Button
               variant="ghost"
               size="lg"
-              onClick={() => onDecision("DECLINED")}
+              onClick={() => setConfirmPass(true)}
               disabled={deciding}
               className="flex-1"
             >
@@ -506,50 +593,15 @@ function MatchDashboard({
               Interested
             </Button>
           </div>
-        ) : (
-          <div className="mt-6 rounded-xl bg-sage-pale/30 border border-sage-light/30 px-4 py-3 text-center">
-            <p className="text-sm font-medium text-sage">You said you&rsquo;re interested</p>
-            <p className="text-xs text-text-tertiary mt-1">Waiting to see if they feel the same&hellip;</p>
-          </div>
         )}
       </Card>
 
       {/* Paid reroll — swaps this match for a new one immediately */}
-      <div className="max-w-sm mx-auto mt-8">
-        <div className="rounded-xl border border-border-light bg-white/60 px-5 py-4">
-          <div className="flex items-start gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-butter-pale/70 text-espresso border border-butter-light/40">
-              <Shuffle className="w-4 h-4" strokeWidth={1.8} />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-charcoal">Not feeling it?</p>
-              <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">
-                Get a different match right now instead of waiting for Wednesday.
-              </p>
-              <button
-                type="button"
-                onClick={onReroll}
-                disabled={rerolling}
-                className={cn(
-                  "mt-3 inline-flex items-center gap-1.5 text-sm font-medium",
-                  "text-sage hover:text-olive transition-colors disabled:opacity-50",
-                )}
-              >
-                {rerolling
-                  ? "Finding someone new\u2026"
-                  : hasRerollCredit
-                    ? "Use your reroll"
-                    : `Reroll for ${formatRerollPrice()}`}
-              </button>
-              {rerollError && (
-                <p className="mt-2 text-xs text-error" role="alert">
-                  {rerollError}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      <RerollCard
+        title="Not feeling it?"
+        body="Get a different match right now instead of waiting for Wednesday."
+        {...reroll}
+      />
 
       <p className="max-w-sm mx-auto mt-6 text-center text-xs text-text-tertiary">
         <Link href="/profile#photo" className="font-medium text-sage hover:text-olive underline-offset-4 hover:underline">
@@ -903,8 +955,15 @@ export default function DashboardPage() {
           />
         ) : showMatchClosedCalm ? (
           <MatchClosedDashboard
-            youDeclined={match!.closedMatch!.youDeclined}
+            reason={
+              match!.closedMatch!.reason ??
+              (match!.closedMatch!.youDeclined ? "you-declined" : "they-declined")
+            }
             onBackToDashboard={() => setMatchClosedCalmDismissed(true)}
+            onReroll={handleReroll}
+            rerolling={rerolling}
+            rerollError={rerollError}
+            hasRerollCredit={(user?.rerollCredits ?? 0) > 0}
           />
         ) : (
           <WaitlistDashboard

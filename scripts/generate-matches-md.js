@@ -272,13 +272,20 @@ function overlap(a, b) {
   return n;
 }
 
+/** Ideal hangout is a comma-separated multi-select; any overlap counts. */
+function hangoutList(raw) {
+  if (!raw) return [];
+  return String(raw).split(",").map(function (x) { return x.trim(); })
+    .filter(function (x) { return !!x; });
+}
+
 function softScore(a, b) {
   var s = 0;
   if (a.intentions && a.intentions === b.intentions) s += 3;
   if (a.vibe && a.vibe === b.vibe) s += 2;
   var sh = overlap(a.interests || [], b.interests || []);
   s += Math.min(5, sh);
-  if (a.idealHangout && a.idealHangout === b.idealHangout) s += 2;
+  if (overlap(hangoutList(a.idealHangout), hangoutList(b.idealHangout))) s += 2;
   s += Math.min(4, overlap(a.availability || [], b.availability || []));
   if (a.majorPreference && a.majorPreference === b.major) s += 2;
   if (b.majorPreference && b.majorPreference === a.major) s += 2;

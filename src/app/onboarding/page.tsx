@@ -8,6 +8,7 @@ import AuthShell from "@/components/auth/AuthShell";
 import { AuthPanel } from "@/components/auth/AuthPanel";
 import { ProgressStepper } from "@/components/ui/ProgressStepper";
 import { ONBOARDING_STEPS } from "@/lib/constants";
+import { stringifyIdealHangouts } from "@/lib/idealHangouts";
 import type {
   OnboardingData,
   UserProfile,
@@ -46,7 +47,7 @@ const INITIAL_DATA: OnboardingData = {
     intentions: "",
     vibe: "",
     interests: [],
-    idealHangout: "",
+    idealHangouts: [],
     availability: [],
   },
   preferences: {
@@ -80,6 +81,7 @@ function OnboardingInner() {
     return { ...INITIAL_DATA, referralSource: ref, email };
   });
   const [phone, setPhone] = useState("");
+  const [smsConsent, setSmsConsent] = useState(true);
   const [signupError, setSignupError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -164,7 +166,7 @@ function OnboardingInner() {
           intentions: data.personality.intentions,
           vibe: data.personality.vibe,
           interests: data.personality.interests,
-          idealHangout: data.personality.idealHangout,
+          idealHangout: stringifyIdealHangouts(data.personality.idealHangouts),
           availability: data.personality.availability,
           genderPreference: data.preferences.genderPreference,
           schoolPreference: data.preferences.schoolPreference,
@@ -209,8 +211,6 @@ function OnboardingInner() {
     label,
     description,
   }));
-
-  const showChrome = currentStep < CINEMATIC_STEP;
 
   function renderStep() {
     switch (currentStep) {
@@ -305,6 +305,8 @@ function OnboardingInner() {
           <StepPhone
             phone={phone}
             onPhoneChange={setPhone}
+            smsConsent={smsConsent}
+            onSmsConsentChange={setSmsConsent}
             onCodeSent={goForward}
             onBack={goBack}
           />
@@ -313,15 +315,23 @@ function OnboardingInner() {
         return (
           <StepOTP
             phone={phone}
+            smsConsent={smsConsent}
             onVerified={() => setCurrentStep(CINEMATIC_STEP)}
             onBack={goBack}
           />
         );
-      case CINEMATIC_STEP:
-        return <StepSuccess />;
       default:
         return null;
     }
+  }
+
+  /* The success step takes over the whole screen with `fixed inset-0`, so it
+     cannot render inside the shell: both the bezel and the form panel use
+     backdrop-filter, which makes them containing blocks for fixed children.
+     Inside the panel the takeover was laid out against the panel's box — the
+     flower landed on top of the wordmark and "You're in" sat in a 200px card. */
+  if (currentStep === CINEMATIC_STEP) {
+    return <StepSuccess />;
   }
 
   return (
@@ -332,37 +342,30 @@ function OnboardingInner() {
         backLabel={currentStep === 1 ? "Back to home" : "Back a step"}
         {...(currentStep === 1 ? { backHref: "/" } : { onBack: goBack })}
         footer={
-          showChrome ? (
-            <>
-              Already have an account?{" "}
-              <Link
-                href="/login"
-                className="text-ivory underline underline-offset-4 transition-opacity hover:opacity-80"
-              >
-                Sign in
-              </Link>
-            </>
-          ) : null
+          <>
+            Already have an account?{" "}
+            <Link
+              href="/login"
+              className="text-ivory underline underline-offset-4 transition-opacity hover:opacity-80"
+            >
+              Sign in
+            </Link>
+          </>
         }
       >
-        {showChrome && (
-          <div className="auth-dark mb-6 px-1">
-            <ProgressStepper
-              currentStep={currentStep}
-              totalSteps={TOTAL_PROGRESS_STEPS}
-              steps={steps}
-            />
-          </div>
-        )}
+        <div className="auth-dark mb-6 px-1">
+          <ProgressStepper
+            currentStep={currentStep}
+            totalSteps={TOTAL_PROGRESS_STEPS}
+            steps={steps}
+          />
+        </div>
 
         <AuthPanel className="auth-dark">
           <div
             key={currentStep}
             style={{
-              animation:
-                currentStep < CINEMATIC_STEP
-                  ? "onboarding-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1)"
-                  : "none",
+              animation: "onboarding-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
             }}
           >
             {renderStep()}

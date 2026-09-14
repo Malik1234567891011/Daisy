@@ -11,7 +11,8 @@ export interface PersonalityData {
   intentions: string;
   vibe: string;
   interests: string[];
-  idealHangout: string;
+  /** Multi-select; joined into the single `idealHangout` column on submit. */
+  idealHangouts: string[];
   availability: string[];
 }
 

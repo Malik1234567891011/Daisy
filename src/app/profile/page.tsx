@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Chip } from "@/components/ui/Chip";
 import Button from "@/components/ui/Button";
-import { SCHOOLS, MAJORS, ETHNICITIES, GENDERS } from "@/lib/constants";
+import { SCHOOLS, MAJORS, ETHNICITIES, GENDERS, IDEAL_HANGOUTS } from "@/lib/constants";
+import { parseIdealHangouts, stringifyIdealHangouts } from "@/lib/idealHangouts";
 import type { ContactMethod } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import ProfilePhotoPicker from "@/components/profile/ProfilePhotoPicker";
@@ -42,11 +43,17 @@ function ethnicityApiToSelected(raw: string | null | undefined): string[] {
     .filter((s) => ETHNICITIES.includes(s));
 }
 
+function hangoutsApiToSelected(raw: string | null | undefined): string[] {
+  const known = IDEAL_HANGOUTS.map((o) => o.value);
+  return parseIdealHangouts(raw).filter((v) => known.includes(v));
+}
+
 interface FormErrors {
   firstName?: string;
   school?: string;
   major?: string;
   age?: string;
+  idealHangouts?: string;
   contactValue?: string;
 }
 
@@ -60,8 +67,10 @@ export default function ProfilePage() {
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
   const [selectedEthnicities, setSelectedEthnicities] = useState<string[]>([]);
+  const [selectedHangouts, setSelectedHangouts] = useState<string[]>([]);
   const [contactMethod, setContactMethod] = useState<ContactMethod>("instagram");
   const [contactValue, setContactValue] = useState("");
+  const [smsConsent, setSmsConsent] = useState(true);
   const [errors, setErrors] = useState<FormErrors>({});
   const [saved, setSaved] = useState(false);
   const [isFetchingUser, setIsFetchingUser] = useState(true);
@@ -96,8 +105,10 @@ export default function ProfilePage() {
         setAge(data.age != null && data.age !== "" ? String(data.age) : "");
         setGender(typeof data.gender === "string" ? data.gender : "");
         setSelectedEthnicities(ethnicityApiToSelected(data.ethnicity));
+        setSelectedHangouts(hangoutsApiToSelected(data.idealHangout));
         setContactMethod(parseContactMethod(data.contactMethod));
         setContactValue(typeof data.contactValue === "string" ? data.contactValue : "");
+        setSmsConsent(data.smsConsent !== false);
         setPhotoUrl(typeof data.photoUrl === "string" ? data.photoUrl : null);
       } catch (e) {
         if (!cancelled) {
@@ -124,6 +135,12 @@ export default function ProfilePage() {
     );
   }, []);
 
+  const toggleHangout = useCallback((value: string) => {
+    setSelectedHangouts((prev) =>
+      prev.includes(value) ? prev.filter((h) => h !== value) : [...prev, value]
+    );
+  }, []);
+
   const validate = useCallback((): boolean => {
     const next: FormErrors = {};
     if (!firstName.trim()) next.firstName = "First name is required";
@@ -132,10 +149,11 @@ export default function ProfilePage() {
     const ageNum = parseInt(age, 10);
     if (!age || isNaN(ageNum)) next.age = "Please enter your age";
     else if (ageNum < 18 || ageNum > 30) next.age = "Age must be between 18 and 30";
+    if (selectedHangouts.length === 0) next.idealHangouts = "Pick at least one";
     if (!contactValue.trim()) next.contactValue = "Please enter your contact info";
     setErrors(next);
     return Object.keys(next).length === 0;
-  }, [firstName, school, major, age, contactValue]);
+  }, [firstName, school, major, age, selectedHangouts, contactValue]);
 
   const handleSave = useCallback(async () => {
     if (!validate()) return;
@@ -152,8 +170,10 @@ export default function ProfilePage() {
           age,
           gender,
           ethnicity: selectedEthnicities.length > 0 ? selectedEthnicities.join(", ") : "",
+          idealHangout: stringifyIdealHangouts(selectedHangouts),
           contactMethod,
           contactValue: contactValue.trim(),
+          smsConsent,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -173,9 +193,12 @@ export default function ProfilePage() {
     school,
     major,
     age,
+    gender,
     selectedEthnicities,
+    selectedHangouts,
     contactMethod,
     contactValue,
+    smsConsent,
   ]);
 
   const activePlaceholder = CONTACT_METHODS.find((m) => m.value === contactMethod)?.placeholder ?? "";
@@ -314,6 +337,40 @@ export default function ProfilePage() {
                   ))}
                 </div>
               </div>
+
+              {/* Ideal first hangout */}
+              <div>
+                <p className="mb-1.5 text-sm font-medium text-charcoal">
+                  Ideal first hangout{" "}
+                  <span className="font-normal text-text-tertiary">(pick any)</span>
+                </p>
+                <p className="mb-3 text-sm text-text-tertiary">
+                  What you&rsquo;d actually want to do on a first date.
+                </p>
+                <div
+                  className="flex flex-wrap gap-2"
+                  role="listbox"
+                  aria-label="Ideal first hangout options"
+                  aria-multiselectable="true"
+                >
+                  {IDEAL_HANGOUTS.map((opt) => (
+                    <Chip
+                      key={opt.value}
+                      selected={selectedHangouts.includes(opt.value)}
+                      onToggle={() => toggleHangout(opt.value)}
+                      disabled={isPageLoading}
+                    >
+                      <span className="mr-1.5" aria-hidden>
+                        {opt.emoji}
+                      </span>
+                      {opt.label}
+                    </Chip>
+                  ))}
+                </div>
+                {errors.idealHangouts && (
+                  <p className="mt-2 text-sm text-error">{errors.idealHangouts}</p>
+                )}
+              </div>
             </div>
           </Card>
 
@@ -359,6 +416,23 @@ export default function ProfilePage() {
             <p className="mt-3 text-xs text-text-tertiary">
               Only shared after a successful match.
             </p>
+
+            <div className="h-px bg-border-light my-5" aria-hidden />
+
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={smsConsent}
+                onChange={(e) => setSmsConsent(e.target.checked)}
+                disabled={isPageLoading}
+                className="mt-0.5 h-4 w-4 rounded border-border text-sage focus:ring-sage-light/60 accent-sage"
+              />
+              <span className="text-sm text-text-secondary leading-relaxed">
+                <span className="font-medium text-charcoal">Text me about my matches.</span>{" "}
+                When a match drops and when it&rsquo;s mutual. Turn this off and
+                you&rsquo;ll need to check the dashboard yourself.
+              </span>
+            </label>
           </Card>
 
           {/* Actions */}

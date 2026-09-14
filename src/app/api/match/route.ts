@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { CLOSED_MATCH_WINDOW_MS } from "@/lib/matching";
+
+type ClosedMatchReason = "you-declined" | "they-declined" | "rerolled";
 
 export async function GET() {
   try {
@@ -10,12 +13,13 @@ export async function GET() {
     }
 
     const userId = session.user.id;
+    const now = new Date();
 
     const match = await prisma.match.findFirst({
       where: {
         OR: [{ userAId: userId }, { userBId: userId }],
         status: { in: ["PENDING", "MUTUAL"] },
-        dropDate: { lte: new Date() },
+        dropDate: { lte: now },
       },
       orderBy: { dropDate: "desc" },
       include: {
@@ -38,28 +42,39 @@ export async function GET() {
     });
 
     if (!match) {
+      // Only this week's closed match counts. The seed script never expires
+      // DECLINED/REROLLED rows, so without the window a rejection from weeks
+      // ago would greet everyone who is simply unmatched this week.
       const lastClosed = await prisma.match.findFirst({
         where: {
           OR: [{ userAId: userId }, { userBId: userId }],
-          // REROLLED means the other side paid to swap out of it. They see
-          // the same calm "didn't work out" screen either way.
           status: { in: ["DECLINED", "REROLLED"] },
+          dropDate: {
+            lte: now,
+            gte: new Date(now.getTime() - CLOSED_MATCH_WINDOW_MS),
+          },
         },
         orderBy: { dropDate: "desc" },
         select: {
           userAId: true,
           userADecision: true,
           userBDecision: true,
+          status: true,
         },
       });
 
       if (lastClosed) {
         const isUserA = lastClosed.userAId === userId;
         const myDecision = isUserA ? lastClosed.userADecision : lastClosed.userBDecision;
-        const youDeclined = myDecision === "DECLINED";
+        const reason: ClosedMatchReason =
+          myDecision === "DECLINED"
+            ? "you-declined"
+            : lastClosed.status === "REROLLED"
+              ? "rerolled"
+              : "they-declined";
         return NextResponse.json({
           hasMatch: false,
-          closedMatch: { youDeclined },
+          closedMatch: { youDeclined: reason === "you-declined", reason },
         });
       }
 

@@ -64,7 +64,9 @@ export async function POST(req: NextRequest) {
         contactValue: contactValue || null,
         referralCode,
         referredBy: referralSource || null,
-        smsConsent: true,
+        // Set for real on the phone step (POST /api/otp/verify), from the
+        // checkbox the user actually sees.
+        smsConsent: false,
         onboardingComplete: false,
       },
     });

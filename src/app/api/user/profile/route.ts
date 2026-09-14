@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { sanitizeIdealHangouts, stringifyIdealHangouts } from "@/lib/idealHangouts";
 
 export async function PUT(req: NextRequest) {
   const session = await auth();
@@ -10,7 +11,10 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { firstName, school, major, age, gender, ethnicity, contactMethod, contactValue } = body;
+    const {
+      firstName, school, major, age, gender, ethnicity, idealHangout,
+      contactMethod, contactValue, smsConsent,
+    } = body;
 
     const user = await prisma.user.update({
       where: { id: session.user.id },
@@ -21,8 +25,14 @@ export async function PUT(req: NextRequest) {
         age: age !== undefined ? (age ? parseInt(age, 10) : null) : undefined,
         gender: gender !== undefined ? (gender || null) : undefined,
         ethnicity: ethnicity !== undefined ? (ethnicity || null) : undefined,
+        idealHangout:
+          idealHangout !== undefined
+            ? stringifyIdealHangouts(sanitizeIdealHangouts(idealHangout)) || null
+            : undefined,
         contactMethod: contactMethod ?? undefined,
         contactValue: contactValue ?? undefined,
+        // The opt-out promised on the phone step lives here.
+        smsConsent: typeof smsConsent === "boolean" ? smsConsent : undefined,
       },
       select: {
         id: true,
@@ -32,8 +42,10 @@ export async function PUT(req: NextRequest) {
         age: true,
         gender: true,
         ethnicity: true,
+        idealHangout: true,
         contactMethod: true,
         contactValue: true,
+        smsConsent: true,
       },
     });
 

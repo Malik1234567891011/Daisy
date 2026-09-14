@@ -61,15 +61,25 @@ export default function StepIdentity({
         profile.
       </p>
 
-      <div className="flex items-center gap-3 mt-10">
-        <Button type="button" variant="ghost" onClick={onBack}>
-          Back
-        </Button>
-        <Button type="button" variant="ghost" onClick={onNext}>
+      {/* Back + Continue is the row every other step uses, and it is as wide as
+          a phone-width panel fits. The third action goes underneath as a link
+          rather than a third pill, which overflowed the card. */}
+      <div className="flex flex-col gap-4 mt-10">
+        <div className="flex items-center gap-3">
+          <Button type="button" variant="ghost" onClick={onBack}>
+            Back
+          </Button>
+          <Button type="button" onClick={onNext} className="flex-1">
+            Continue
+          </Button>
+        </div>
+        <Button
+          type="button"
+          variant="link"
+          onClick={onNext}
+          className="mx-auto text-sm"
+        >
           Skip this step
-        </Button>
-        <Button type="button" onClick={onNext} className="flex-1">
-          Continue
         </Button>
       </div>
     </div>

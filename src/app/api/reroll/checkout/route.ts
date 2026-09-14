@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { getAppBaseUrl } from "@/lib/app-base-url";
 import { getStripe, getRerollPriceId } from "@/lib/stripe";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { findRerollCandidate } from "@/lib/matching";
+import { findRerollCandidate, getRerollTarget } from "@/lib/matching";
 import {
   REROLL_CURRENCY,
   REROLL_PRICE_CENTS,
@@ -45,28 +45,24 @@ export async function POST(req: Request) {
     );
   }
 
-  // You can only reroll a match you're currently looking at and haven't
-  // matched with. MUTUAL matches are off the table — that one worked.
-  const match = await prisma.match.findFirst({
-    where: {
-      OR: [{ userAId: user.id }, { userBId: user.id }],
-      status: "PENDING",
-      dropDate: { lte: new Date() },
-    },
-    orderBy: { dropDate: "desc" },
-    select: { id: true },
-  });
-
-  if (!match) {
+  // This week's match — live, or closed by either side — can be rerolled.
+  // MUTUAL matches are off the table: that one worked.
+  const target = await getRerollTarget(user.id);
+  if (!target.ok) {
     return NextResponse.json(
-      { error: "You don't have a match to reroll right now." },
+      {
+        error:
+          target.reason === "mutual"
+            ? "You already matched with this person — nothing to reroll."
+            : "You don't have a match to reroll right now.",
+      },
       { status: 400 },
     );
   }
 
   // Already paid and never spent it — don't charge twice.
   if (user.rerollCredits > 0) {
-    return NextResponse.json({ alreadyPaid: true, matchId: match.id });
+    return NextResponse.json({ alreadyPaid: true, matchId: target.matchId });
   }
 
   // Check the pool before taking money. Racy by nature (someone could get
@@ -110,7 +106,7 @@ export async function POST(req: Request) {
     }
 
     const priceId = getRerollPriceId();
-    const metadata = { kind: "reroll", userId: user.id, matchId: match.id };
+    const metadata = { kind: "reroll", userId: user.id, matchId: target.matchId };
 
     const checkout = await stripe.checkout.sessions.create({
       mode: "payment",

@@ -9,7 +9,13 @@ const client = twilio(
   process.env.TWILIO_AUTH_TOKEN!,
 );
 const VERIFY_SID = process.env.TWILIO_VERIFY_SERVICE_SID!;
-const GENERIC_MESSAGE = "If an account exists and is eligible, instructions were applied.";
+
+/**
+ * One message for every way the code can be wrong — mistyped, expired, or
+ * never issued because the account has no verified phone. The page sends the
+ * user back to the code step whenever the error mentions "code".
+ */
+const BAD_CODE = "Invalid or expired code. Please try again.";
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,24 +37,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const perEmail = await checkRateLimit({
-      keyPrefix: "reset-email",
-      identifier: email,
-      limit: 10,
-      window: "1 h",
-    });
-    if (perEmail.limited) {
-      return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });
-    }
-
-    const perIp = await checkRateLimit({
-      keyPrefix: "reset-ip",
-      identifier: getRequestIp(req),
-      limit: 30,
-      window: "1 h",
-    });
-    if (perIp.limited) {
-      return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });
+    const [perEmail, perIp] = await Promise.all([
+      checkRateLimit({ keyPrefix: "reset-email", identifier: email, limit: 10, window: "1 h" }),
+      checkRateLimit({ keyPrefix: "reset-ip", identifier: getRequestIp(req), limit: 30, window: "1 h" }),
+    ]);
+    if (perEmail.limited || perIp.limited) {
+      return NextResponse.json(
+        { error: "Too many attempts. Please wait an hour and try again." },
+        { status: 429 },
+      );
     }
 
     const user = await prisma.user.findUnique({
@@ -57,15 +54,23 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user || !user.phoneNumber || !user.phoneVerified) {
-      return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });
+      return NextResponse.json({ error: BAD_CODE }, { status: 400 });
     }
 
-    const check = await client.verify.v2
-      .services(VERIFY_SID)
-      .verificationChecks.create({ to: user.phoneNumber, code });
+    // Twilio throws (404) when there is no pending verification for this
+    // number — an expired code lands here, not in the "not approved" branch.
+    let approved = false;
+    try {
+      const check = await client.verify.v2
+        .services(VERIFY_SID)
+        .verificationChecks.create({ to: user.phoneNumber, code });
+      approved = check.status === "approved";
+    } catch (error) {
+      console.error("reset-password verify check error", error);
+    }
 
-    if (check.status !== "approved") {
-      return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });
+    if (!approved) {
+      return NextResponse.json({ error: BAD_CODE }, { status: 400 });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
@@ -79,9 +84,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });
-  } catch {
-    console.error("reset-password error");
-    return NextResponse.json({ ok: true, message: GENERIC_MESSAGE });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("reset-password error", error);
+    return NextResponse.json(
+      { error: "Couldn't reset your password right now. Please try again." },
+      { status: 500 },
+    );
   }
 }

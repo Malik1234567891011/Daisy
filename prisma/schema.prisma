@@ -28,7 +28,7 @@ model User {
   intentions    String?   // casual / serious / friends / open
   vibe          String?   // homebody / social / balanced
   interests     String[]  // multi-select tags
-  idealHangout  String?   // coffee / drinks / walk / study / food
+  idealHangout  String?   // comma-separated: coffee / drinks / walk / study / food
   availability  String[]  // weekday-evenings, weekends, flexible, mornings
 
   // Match preferences

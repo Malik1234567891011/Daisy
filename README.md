@@ -37,7 +37,7 @@ Key files:
 
 - Frontend pages live under `src/app/**/page.tsx`.
 - APIs live under `src/app/api/**/route.ts`.
-- Auth/session middleware is in `src/middleware.ts`.
+- Auth/session proxy (Next 16 name for middleware) is in `src/proxy.ts`.
 - Weekly operational scripts live under `scripts/`.
 - Proposed weekly pairs are generated into top-level `../matches.md` (outside `daisy/`).
 
@@ -63,7 +63,7 @@ Important:
 - Login page: `src/app/login/page.tsx`
 - NextAuth handler: `src/app/api/auth/[...nextauth]/route.ts`
 - Auth config: `src/lib/auth.ts`
-- Protected routes are enforced by `src/middleware.ts` (`/dashboard`, `/profile`, `/preferences`, `/verify-phone`).
+- Protected routes are enforced by `src/proxy.ts` (`/dashboard`, `/profile`, `/preferences`, `/verify-phone`, and `/admin` via the admin cookie).
 
 ### 3) Dashboard + Match Decisions
 
@@ -88,7 +88,7 @@ This flow uses Twilio Verify on the user's verified phone, not email-link reset.
 ### 5) Account Deletion
 
 - API: `DELETE /api/user/delete`
-- Deletes user's match rows first, then the user.
+- Deletes user's match rows first, then the user, then the profile photo blob (it is public by URL).
 
 ## Database Model Overview
 
@@ -175,16 +175,23 @@ Implemented in `scripts/generate-matches-md.js`:
 - Vercel cron schedule defined in `vercel.json`.
 - Cron API route: `src/app/api/cron/wednesday-broadcast/route.ts`
 - SMS send logic: `src/lib/wednesdayBroadcastSms.ts`
-- Dedupe: `BroadcastDedupe` table by period key.
+- Dedupe: `BroadcastDedupe` table by period key. The seed script writes the same key after its `--sms` run, so the cron skips that day instead of texting matched users twice.
+- Recipients: only users in a match with `dropDate` in the last 48h (not every verified member). Sends only Wednesday 5:00–7:59 PM Toronto; a second cron at 22:30 UTC retries if the first slipped.
+- Transactional texts (new match from a reroll, mutual) go through `src/lib/sms.ts` and respect `smsConsent`.
 
 ## Admin and Ops Endpoints
 
+- Admin dashboard: `/admin` (`src/app/admin/page.tsx`) — signups, verification
+  funnel, breakdowns, referrers, suspect emails, and a profile viewer with
+  delete. Sign in at `/admin/login` with `ADMIN_API_KEY`; the session is a
+  cookie signed with `AUTH_SECRET` (`src/lib/admin-auth.ts`).
 - Admin match route: `src/app/api/admin/match/route.ts`
 - Admin notify route: `src/app/api/admin/notify/route.ts`
-- Requires `x-admin-key` matching `ADMIN_API_KEY`.
+- Admin delete route: `DELETE /api/admin/users/[id]`
+- All admin routes accept either the admin cookie or an `x-admin-key` header
+  matching `ADMIN_API_KEY`.
 
 Useful scripts:
-- `scripts/dashboard.js` - local operational dashboard (port 3456)
 - `scripts/check-users.js` - quick user check script
 - `scripts/reset-match-between.js` - reset/create pair between two users
 - `scripts/broadcast-daisy-wednesday.js` - broadcast utility
@@ -262,7 +269,8 @@ Other:
 - Seeding and SMS can be run together in one command.
 - Weekly reset logic is now built into seeding to avoid users being stuck on previous week active matches.
 - Duplicate pair protection exists in both generation and seeding layers.
-- Paid rerolls: `POST /api/reroll/checkout` opens a $1.99 CAD Stripe Checkout in `payment` mode; `POST /api/reroll` spends the resulting credit, closes the current match as `REROLLED`, and opens a new one via `src/lib/matching.ts`.
+- Paid rerolls: `POST /api/reroll/checkout` opens a $1.99 CAD Stripe Checkout in `payment` mode; `POST /api/reroll` spends the resulting credit, closes the current match as `REROLLED` (if it was still `PENDING`), and opens a new one via `src/lib/matching.ts`. A match that closed this week (declined by either side, or rerolled away) can also be rerolled, so "Not for me" doesn't lose the upsell. The person rerolled away from gets a free re-match when the pool allows, and everyone who receives a new match is texted.
+- `smsConsent` is set from the checkbox on the phone step (`POST /api/otp/verify`), not assumed at signup, and can be turned off on the profile page.
 - Stripe webhook endpoint is `POST /api/stripe/webhook` and is required to grant reroll credits. It must be subscribed to `checkout.session.completed` and `checkout.session.async_payment_succeeded`.
 - A paid reroll always becomes a credit first, so a payment is never lost if the match pool is momentarily empty.
 

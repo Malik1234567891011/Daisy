@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { MatchStatus } from "@prisma/client";
+import { notifyMutual } from "@/lib/sms";
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest) {
 
     const updateField = isUserA ? "userADecision" : "userBDecision";
     const otherDecision = isUserA ? match.userBDecision : match.userADecision;
+    const partnerId = isUserA ? match.userBId : match.userAId;
 
     let newStatus: MatchStatus = match.status;
     if (decision === "DECLINED") {
@@ -85,19 +87,34 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const updated = await prisma.match.update({
-      where: { id: matchId },
+    // Guard on status so a stale double-submit can't overwrite a match that
+    // resolved between the read above and this write.
+    const updated = await prisma.match.updateMany({
+      where: { id: matchId, status: "PENDING" },
       data: {
         [updateField]: decision,
         status: newStatus,
         ...(suggestedSpotId ? { suggestedSpotId } : {}),
       },
     });
+    if (updated.count !== 1) {
+      return NextResponse.json({ error: "Match already resolved" }, { status: 400 });
+    }
+
+    // The other person said yes first and has been waiting on this. The
+    // person who just clicked sees the result on screen; their match doesn't.
+    if (newStatus === "MUTUAL") {
+      const me = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { firstName: true },
+      });
+      await notifyMutual(partnerId, me?.firstName ?? null);
+    }
 
     return NextResponse.json({
-      status: updated.status,
+      status: newStatus,
       myDecision: decision,
-      isMutual: updated.status === "MUTUAL",
+      isMutual: newStatus === "MUTUAL",
     });
   } catch (err) {
     console.error("Decision error:", err);

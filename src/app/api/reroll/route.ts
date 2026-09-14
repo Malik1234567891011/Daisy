@@ -3,19 +3,26 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getStripe } from "@/lib/stripe";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { findRerollCandidate } from "@/lib/matching";
+import {
+  CandidateTakenError,
+  findRerollCandidate,
+  getRerollTarget,
+  hasLiveMatch,
+  lockUsers,
+  openMatch,
+  rematchFree,
+} from "@/lib/matching";
 import { grantRerollCredit } from "@/lib/reroll-credits";
+import { notifyNewMatch } from "@/lib/sms";
 
 export const runtime = "nodejs";
-
-/** The chosen partner got matched mid-transaction — pick again. */
-class CandidateTakenError extends Error {}
 
 /** The credit or the match was already spent by a concurrent request — don't retry. */
 class AlreadySpentError extends Error {}
 
 /**
- * Spend one reroll credit: close the current match and open a new one.
+ * Spend one reroll credit: close the current match (if it's still open) and
+ * open a new one.
  *
  * Separate from checkout on purpose — the credit is the unit of value, so a
  * payment that can't be fulfilled immediately (empty pool, webhook lag,
@@ -82,19 +89,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No reroll credit available." }, { status: 402 });
   }
 
-  const currentMatch = await prisma.match.findFirst({
-    where: {
-      OR: [{ userAId: userId }, { userBId: userId }],
-      status: "PENDING",
-      dropDate: { lte: new Date() },
-    },
-    orderBy: { dropDate: "desc" },
-    select: { id: true },
-  });
-
-  if (!currentMatch) {
+  const target = await getRerollTarget(userId);
+  if (!target.ok) {
     return NextResponse.json(
-      { error: "You don't have a match to reroll right now." },
+      {
+        error:
+          target.reason === "mutual"
+            ? "You already matched with this person — nothing to reroll."
+            : "You don't have a match to reroll right now.",
+      },
       { status: 400 },
     );
   }
@@ -116,9 +119,13 @@ export async function POST(req: Request) {
     }
 
     try {
-      const newMatch = await prisma.$transaction(async (tx) => {
-        // Conditional decrement doubles as the lock: if two requests race,
-        // only one sees count === 1.
+      const result = await prisma.$transaction(async (tx) => {
+        // Locks both rows for the transaction so a concurrent reroll that
+        // picked the same candidate waits here and then sees our match.
+        await lockUsers(tx, [userId, candidateId]);
+
+        // Conditional decrement doubles as the lock on the credit: if two
+        // requests race, only one sees count === 1.
         const spent = await tx.user.updateMany({
           where: { id: userId, rerollCredits: { gt: 0 } },
           data: { rerollCredits: { decrement: 1 } },
@@ -127,33 +134,24 @@ export async function POST(req: Request) {
           throw new AlreadySpentError("credit already spent");
         }
 
-        // Same guard for the match, so a double-submit can't reroll twice.
-        const closed = await tx.match.updateMany({
-          where: { id: currentMatch.id, status: "PENDING" },
-          data: { status: "REROLLED", rerolledByUserId: userId },
-        });
-        if (closed.count !== 1) {
-          throw new AlreadySpentError("match already resolved");
+        let rerolledPartnerId: string | null = null;
+        if (target.status === "PENDING") {
+          // Same guard for the match, so a double-submit can't reroll twice.
+          const closed = await tx.match.updateMany({
+            where: { id: target.matchId, status: "PENDING" },
+            data: { status: "REROLLED", rerolledByUserId: userId },
+          });
+          if (closed.count !== 1) {
+            throw new AlreadySpentError("match already resolved");
+          }
+          rerolledPartnerId = target.partnerId;
+        } else if (await hasLiveMatch(tx, userId)) {
+          // Rerolling out of a closed match, but something (a free rematch,
+          // an admin) already gave this user a live one in the meantime.
+          throw new AlreadySpentError("already matched");
         }
 
-        const stillFree = await tx.match.count({
-          where: {
-            status: { in: ["PENDING", "MUTUAL"] },
-            OR: [{ userAId: candidateId }, { userBId: candidateId }],
-          },
-        });
-        if (stillFree > 0) {
-          throw new CandidateTakenError("candidate was matched");
-        }
-
-        const created = await tx.match.create({
-          data: {
-            userAId: userId,
-            userBId: candidateId,
-            dropDate: new Date(),
-          },
-          select: { id: true },
-        });
+        const created = await openMatch(tx, userId, candidateId);
 
         const purchase = await tx.rerollPurchase.findFirst({
           where: { userId, consumedAt: null },
@@ -167,10 +165,23 @@ export async function POST(req: Request) {
           });
         }
 
-        return created;
+        return { matchId: created.id, rerolledPartnerId };
       });
 
-      return NextResponse.json({ matchId: newMatch.id });
+      // After commit. The person rerolled away from did nothing wrong, so
+      // try to hand them someone new for free; then text everyone who just
+      // got a match, since nobody refreshes a dashboard on a Thursday.
+      const rematch = result.rerolledPartnerId
+        ? await rematchFree(result.rerolledPartnerId)
+        : null;
+
+      const texts = [notifyNewMatch(candidateId)];
+      if (rematch && result.rerolledPartnerId) {
+        texts.push(notifyNewMatch(result.rerolledPartnerId), notifyNewMatch(rematch.partnerId));
+      }
+      await Promise.all(texts);
+
+      return NextResponse.json({ matchId: result.matchId });
     } catch (error) {
       if (error instanceof CandidateTakenError) continue;
       if (error instanceof AlreadySpentError) {
