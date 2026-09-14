@@ -59,6 +59,10 @@ export default function ProfilePhotoPicker({
 
         if (!res.ok) {
           const raw = typeof data.error === "string" ? data.error : "";
+          // The photo check writes its own copy; show it rather than the generic line.
+          if (data.code === "no_face" || data.code === "explicit") {
+            throw new Error(raw || "Try a different photo.");
+          }
           if (raw.includes("under 3 MB") || raw.includes("3 MB")) {
             throw new Error("That photo’s a bit too big. Try another one.");
           }

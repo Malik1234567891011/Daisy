@@ -3,7 +3,7 @@
 const { resolve } = require("path");
 const { readFileSync, existsSync } = require("fs");
 
-// Load .env and .env.local so BLOB_READ_WRITE_TOKEN is available
+// Load .env and .env.local so SUPABASE_SERVICE_ROLE_KEY is available
 for (const f of [".env", ".env.local"]) {
   const p = resolve(__dirname, "..", f);
   if (!existsSync(p)) continue;
@@ -14,7 +14,7 @@ for (const f of [".env", ".env.local"]) {
 }
 
 const { PrismaClient } = require("@prisma/client");
-const { list, del } = require("@vercel/blob");
+const { createClient } = require("@supabase/supabase-js");
 
 const p = new PrismaClient();
 
@@ -28,20 +28,30 @@ const p = new PrismaClient();
     const { count: userCount } = await p.user.deleteMany();
     console.log(`  Deleted ${userCount} user(s)`);
 
-    // 3. Delete all blobs in the photos/ prefix
-    let blobCount = 0;
-    let cursor;
-    do {
-      const result = await list({ prefix: "photos/", cursor, limit: 100 });
-      for (const blob of result.blobs) {
-        await del(blob.url);
-        blobCount++;
-      }
-      cursor = result.hasMore ? result.cursor : undefined;
-    } while (cursor);
+    // 3. Delete every object under photos/ in the profile-photos bucket
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { persistSession: false } },
+    );
+    const bucket = supabase.storage.from("profile-photos");
 
-    console.log(`  Deleted ${blobCount} photo(s) from Blob storage`);
-    console.log("\n  ✓ Database and Blob storage wiped.\n");
+    let photoCount = 0;
+    for (let offset = 0; ; ) {
+      const { data, error } = await bucket.list("photos", { limit: 100, offset });
+      if (error) throw new Error(error.message);
+      if (!data.length) break;
+
+      const { error: removeError } = await bucket.remove(
+        data.map((o) => `photos/${o.name}`),
+      );
+      if (removeError) throw new Error(removeError.message);
+      photoCount += data.length;
+      // Removed objects leave the listing, so the offset stays at 0.
+    }
+
+    console.log(`  Deleted ${photoCount} photo(s) from Supabase Storage`);
+    console.log("\n  ✓ Database and Storage wiped.\n");
   } catch (err) {
     console.error("Error:", err.message);
   } finally {

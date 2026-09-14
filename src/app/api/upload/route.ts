@@ -1,25 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { del, put } from "@vercel/blob";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { deleteProfilePhoto, uploadProfilePhoto } from "@/lib/photoStorage";
+import { checkProfilePhoto } from "@/lib/photoCheck";
 
 const MAX_SIZE = 3 * 1024 * 1024; // 3 MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-
-/** Only delete blobs we uploaded: Vercel store + path photos/{userId}-timestamp.ext */
-function isOurPreviousProfilePhoto(url: string, userId: string): boolean {
-  try {
-    const { hostname, pathname } = new URL(url);
-    if (!hostname.endsWith(".public.blob.vercel-storage.com")) return false;
-    const prefix = `/photos/${userId}-`;
-    return (
-      pathname.startsWith(prefix) &&
-      /\.(jpe?g|png|webp)$/i.test(pathname)
-    );
-  } catch {
-    return false;
-  }
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -60,34 +46,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const ext = file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
-    const filename = `photos/${userId}-${Date.now()}.${ext}`;
-
     // Convert File to Buffer for reliable serverless upload
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const blob = await put(filename, buffer, {
-      access: "public",
-      contentType: file.type,
-    });
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: { photoUrl: blob.url },
-    });
-
-    if (
-      previousUrl &&
-      previousUrl !== blob.url &&
-      isOurPreviousProfilePhoto(previousUrl, userId)
-    ) {
-      del(previousUrl).catch((e) =>
-        console.error("Could not delete previous profile photo:", e),
+    // Permissive: only clear non-faces and explicit content are turned away,
+    // and an outage at the provider lets the photo through.
+    const verdict = await checkProfilePhoto(buffer, file.type);
+    if (!verdict.ok) {
+      return NextResponse.json(
+        { error: verdict.message, code: verdict.code },
+        { status: 422 },
       );
     }
 
-    return NextResponse.json({ url: blob.url });
+    const photoUrl = await uploadProfilePhoto(buffer, file.type, userId);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { photoUrl },
+    });
+
+    // Awaited, not fire-and-forget: the function can be frozen the moment
+    // the response goes out, which would strand the old blob.
+    if (previousUrl && previousUrl !== photoUrl) {
+      await deleteProfilePhoto(previousUrl, userId);
+    }
+
+    return NextResponse.json({ url: photoUrl });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("Upload error:", message);
