@@ -63,6 +63,16 @@ model User {
 
   onboardingComplete Boolean @default(false)
 
+  // Eligibility self-attestations. Daisy does not verify enrollment or age
+  // against documents; these record that the user affirmed each requirement,
+  // and are set server-side at signup so the checkbox can't be the only gate.
+  studentAttestedAt DateTime?
+  age18AttestedAt   DateTime?
+
+  /// Synthetic account (e.g. platform reviewers). Excluded server-side from
+  /// weekly matching, reroll pools, and every SMS/broadcast path.
+  isTestAccount Boolean @default(false)
+
   passwordResetTokenHash String?   @unique
   passwordResetExpires DateTime?
 

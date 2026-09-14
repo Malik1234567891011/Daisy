@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { qualifies, standing } from "@/lib/raffle";
 
 export async function GET() {
   const session = await auth();
@@ -47,9 +48,22 @@ export async function GET() {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
+  // Draw entries only count a referral that can actually be matched: verified
+  // number, photo, onboarding finished. The old count checked phoneVerified
+  // alone, which would have paid out entries for half-finished accounts.
   const referralCount = user.referralCode
-    ? await prisma.user.count({ where: { referredBy: user.referralCode, phoneVerified: true } })
+    ? await prisma.user.count({
+        where: {
+          referredBy: user.referralCode,
+          phoneVerified: true,
+          onboardingComplete: true,
+          photoUrl: { not: null },
+          isTestAccount: false,
+        },
+      })
     : 0;
 
-  return NextResponse.json({ ...user, referralCount });
+  const raffle = standing(qualifies(user), referralCount);
+
+  return NextResponse.json({ ...user, referralCount, raffle });
 }

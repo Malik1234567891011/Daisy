@@ -5,10 +5,6 @@ const DELAY_MS = 650;
 
 const TZ = "America/Toronto";
 
-/** A drop counts as "just happened" for this long. Shared by the recipient
- *  query and the has-a-drop-happened guard so they can never disagree. */
-export const DROP_WINDOW_MS = 48 * 60 * 60 * 1000;
-
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -45,12 +41,9 @@ export function torontoDateKey(d: Date): string {
 }
 
 /**
- * True on Wednesday between 5:00 PM and 7:59 PM Toronto.
- *
- * Vercel cron fires at 22:00 UTC (`0 22 * * 3`): 6:00 PM in summer, 5:00 PM
- * in winter. The window is three hours wide, not fifteen minutes, because
- * cron delivery can slip — on the Hobby plan by up to an hour — and a missed
- * window means nobody gets texted that week. Dedupe stops double sends.
+ * True during Wednesday ~5:00–6:14 PM Toronto (first quarter of the 5pm or 6pm hour).
+ * Vercel cron runs once at 22:00 UTC (`0 22 * * 3`): in summer that is 6:00 PM Toronto,
+ * in winter 5:00 PM — one slot covers both without a second daily cron.
  */
 export function isWednesdaySixPmTorontoWindow(now: Date): boolean {
   const weekday = new Intl.DateTimeFormat("en-US", {
@@ -63,12 +56,35 @@ export function isWednesdaySixPmTorontoWindow(now: Date): boolean {
     hour: "numeric",
     hour12: false,
   }).format(now);
+  const minuteStr = new Intl.DateTimeFormat("en-US", {
+    timeZone: TZ,
+    minute: "numeric",
+  }).format(now);
   const hour = parseInt(hourStr, 10);
-  return hour >= 17 && hour <= 19;
+  const minute = parseInt(minuteStr, 10);
+  return (hour === 17 || hour === 18) && minute < 15;
+}
+
+/** How far back a match's dropDate can be and still count as "this drop". */
+export const DROP_WINDOW_MS = 48 * 60 * 60 * 1000;
+
+/**
+ * Matches belonging to the drop that just went live.
+ *
+ * Synthetic accounts are excluded on both sides. A reviewer's seeded match is
+ * still a Match row with a dropDate, and without this it would satisfy the
+ * "has a drop happened" gate for the entire production user base.
+ */
+function realDropWhere(now: Date) {
+  return {
+    dropDate: { lte: now, gte: new Date(now.getTime() - DROP_WINDOW_MS) },
+    userA: { isTestAccount: false },
+    userB: { isTestAccount: false },
+  } as const;
 }
 
 /**
- * At least one match whose drop time has passed in the last 48h (weekly drop just went live).
+ * At least one real match whose drop time has passed in the last 48h (weekly drop just went live).
  * Disable with BROADCAST_REQUIRE_RECENT_DROP=no
  */
 export async function hasRecentPublicDrop(
@@ -76,41 +92,33 @@ export async function hasRecentPublicDrop(
   now: Date,
 ): Promise<boolean> {
   if (process.env.BROADCAST_REQUIRE_RECENT_DROP === "no") return true;
-  const since = new Date(now.getTime() - DROP_WINDOW_MS);
-  const n = await prisma.match.count({
-    where: { dropDate: { lte: now, gte: since } },
-  });
+  const n = await prisma.match.count({ where: realDropWhere(now) });
   return n > 0;
 }
 
 /**
- * Only people who actually got a match in this drop. Texting every verified
- * member "your match is ready" sends the unmatched ones to an empty
- * dashboard. EXPIRED is excluded so a reroll from earlier in the week that
- * the seed script just retired doesn't count as this week's drop.
+ * Who gets texted: people who actually have a live match in this drop.
+ *
+ * This used to return every consenting user regardless of whether they were in
+ * the drop, which meant one stray Match row could trigger a message to the
+ * whole user base telling them a match was waiting when none was. Recipients
+ * are now derived from the drop itself.
  */
 export async function getWednesdayBroadcastRecipients(
   prisma: PrismaClient,
-  now: Date = new Date(),
+  now: Date,
 ) {
-  const since = new Date(now.getTime() - DROP_WINDOW_MS);
-  const matches = await prisma.match.findMany({
-    where: {
-      dropDate: { lte: now, gte: since },
-      status: { not: "EXPIRED" },
-    },
-    select: { userAId: true, userBId: true },
-  });
-
-  const ids = [...new Set(matches.flatMap((m) => [m.userAId, m.userBId]))];
-  if (ids.length === 0) return [];
-
+  const where = realDropWhere(now);
   return prisma.user.findMany({
     where: {
-      id: { in: ids },
       phoneVerified: true,
       phoneNumber: { not: null },
       smsConsent: true,
+      isTestAccount: false,
+      OR: [
+        { matchesAsA: { some: { ...where, status: { in: ["PENDING", "MUTUAL"] } } } },
+        { matchesAsB: { some: { ...where, status: { in: ["PENDING", "MUTUAL"] } } } },
+      ],
     },
     select: {
       id: true,

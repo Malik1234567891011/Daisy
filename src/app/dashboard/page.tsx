@@ -12,12 +12,128 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
 import {
   Users, Send, Sparkles, User, Settings, Mail, Heart, X,
-  MapPin, Bell, Calendar, Shuffle,
+  MapPin, Bell, Calendar, Shuffle, Ticket,
 } from "lucide-react";
 import ProfilePhotoPicker from "@/components/profile/ProfilePhotoPicker";
 import { INTENTIONS, VIBES, IDEAL_HANGOUTS } from "@/lib/constants";
 import { parseIdealHangouts } from "@/lib/idealHangouts";
-import { formatRerollPrice } from "@/lib/billing";
+import { formatRerollPrice, formatRerollPriceWithCurrency } from "@/lib/billing";
+import { RAFFLE, isOpen, type RaffleStanding } from "@/lib/raffle";
+
+/**
+ * Relaunch draw standing.
+ *
+ * Leads with the entry count because that is the number people came for, then
+ * shows the gap to the next one — a bare total gives no reason to act, and the
+ * remainder is the whole point of the referral link sitting beside it.
+ */
+function RaffleCard({
+  standing,
+  loading,
+  compact = false,
+}: {
+  standing?: RaffleStanding;
+  loading: boolean;
+  compact?: boolean;
+}) {
+  const entries = standing?.entries ?? 0;
+  const entered = entries > 0;
+  const toNext = standing?.toNextEntry ?? RAFFLE.referralsPerEntry;
+  const got = standing ? standing.qualifiedReferrals % RAFFLE.referralsPerEntry : 0;
+
+  if (compact) {
+    return (
+      <div className="max-w-sm mx-auto mt-8 rounded-xl border border-border-light bg-white/60 px-5 py-3.5">
+        <div className="flex items-center gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-butter-pale/70 text-espresso border border-butter-light/40">
+            <Ticket className="w-4 h-4" strokeWidth={1.8} />
+          </span>
+          <p className="min-w-0 flex-1 text-xs text-text-secondary leading-relaxed">
+            {entered ? (
+              <>
+                Your name is in{" "}
+                <span className="font-medium text-charcoal">
+                  {entries} time{entries === 1 ? "" : "s"}
+                </span>{" "}
+                for {RAFFLE.prizeLabel}.{" "}
+                <span className="text-text-tertiary">
+                  {toNext} more friend{toNext === 1 ? "" : "s"} for another entry.
+                </span>
+              </>
+            ) : (
+              <>Add a photo and verify your number to enter the {RAFFLE.prizeLabel} draw.</>
+            )}{" "}
+            <Link href={RAFFLE.rulesHref} className="font-medium text-sage underline-offset-4 hover:underline">
+              Details
+            </Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Card className="flex items-start gap-4">
+      <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-butter-pale/70 border border-butter-light/40">
+        <Ticket className="w-5 h-5 text-espresso" strokeWidth={1.6} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <h2 className="font-display text-lg text-charcoal mb-1">
+          {entered ? "You\u2019re in the draw" : "Finish your profile to enter"}
+        </h2>
+
+        {loading ? (
+          <Skeleton className="h-4 w-40" />
+        ) : entered ? (
+          <>
+            <p className="text-sm text-text-secondary leading-relaxed">
+              Your name is in{" "}
+              <span className="font-medium text-charcoal">
+                {entries} time{entries === 1 ? "" : "s"}
+              </span>{" "}
+              for {RAFFLE.prizeBlurb}.
+            </p>
+
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-xs text-text-tertiary mb-1.5">
+                <span>
+                  {toNext} more friend{toNext === 1 ? "" : "s"} for another entry
+                </span>
+                <span aria-hidden="true">
+                  {got}/{RAFFLE.referralsPerEntry}
+                </span>
+              </div>
+              <div
+                className="h-1.5 w-full rounded-full bg-sage-pale/50 overflow-hidden"
+                role="progressbar"
+                aria-valuenow={got}
+                aria-valuemin={0}
+                aria-valuemax={RAFFLE.referralsPerEntry}
+                aria-label="Progress toward your next draw entry"
+              >
+                <div
+                  className="h-full rounded-full bg-sage transition-[width] duration-500"
+                  style={{ width: `${(got / RAFFLE.referralsPerEntry) * 100}%` }}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-text-secondary leading-relaxed">
+            Verify your number and add a photo, and you\u2019re entered for {RAFFLE.prizeBlurb}.
+          </p>
+        )}
+
+        <p className="mt-3 text-xs text-text-tertiary">
+          Entries close {RAFFLE.closesLabel}.{" "}
+          <Link href={RAFFLE.rulesHref} className="font-medium text-sage underline-offset-4 hover:underline">
+            How it works
+          </Link>
+        </p>
+      </div>
+    </Card>
+  );
+}
 
 /* ─── Types ─── */
 type UserData = {
@@ -32,6 +148,7 @@ type UserData = {
   photoUrl: string | null;
   rerollCredits: number;
   createdAt: string;
+  raffle?: RaffleStanding;
 };
 
 type MatchPartner = {
@@ -267,7 +384,7 @@ function MatchClosedDashboard({
           new match. Keep the offer in front of them. */}
       <RerollCard
         title="Don’t want to wait?"
-        body="Get a new match right now instead of waiting for Wednesday."
+        body={`Get a new match right now instead of waiting for Wednesday. One-time ${formatRerollPriceWithCurrency()} — not a subscription, and it doesn’t renew.`}
         {...reroll}
       />
 
@@ -315,6 +432,7 @@ function WaitlistDashboard({
   }, [referralLink]);
 
   const wedLabel = nextDrop.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const raffleOpen = isOpen();
 
   return (
     <div className="section-container py-12 sm:py-16">
@@ -379,26 +497,34 @@ function WaitlistDashboard({
 
       {/* Status + Invite */}
       <div className="grid gap-6 md:grid-cols-2 mb-10">
-        <Card className="flex items-start gap-4">
-          <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-sage-pale/60 border border-sage-light/30">
-            <Sparkles className="w-5 h-5 text-sage" strokeWidth={1.6} />
-          </div>
-          <div>
-            <h2 className="font-display text-lg text-charcoal mb-1">You&rsquo;re in the first wave</h2>
-            <p className="text-sm text-text-secondary leading-relaxed">
-              Early sign-ups get matched first. Your profile is in queue and looking great.
-            </p>
-          </div>
-        </Card>
+        {raffleOpen ? (
+          <RaffleCard standing={user?.raffle} loading={loading} />
+        ) : (
+          <Card className="flex items-start gap-4">
+            <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-sage-pale/60 border border-sage-light/30">
+              <Sparkles className="w-5 h-5 text-sage" strokeWidth={1.6} />
+            </div>
+            <div>
+              <h2 className="font-display text-lg text-charcoal mb-1">You&rsquo;re in the first wave</h2>
+              <p className="text-sm text-text-secondary leading-relaxed">
+                Early sign-ups get matched first. Your profile is in queue and looking great.
+              </p>
+            </div>
+          </Card>
+        )}
 
         <Card className="flex items-start gap-4">
           <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl bg-butter-pale/70 border border-butter-light/40">
             <Users className="w-5 h-5 text-espresso" strokeWidth={1.6} />
           </div>
           <div>
-            <h2 className="font-display text-lg text-charcoal mb-1">Want your match faster?</h2>
+            <h2 className="font-display text-lg text-charcoal mb-1">
+              {raffleOpen ? "Invite friends, get more entries" : "Want your match faster?"}
+            </h2>
             <p className="text-sm text-text-secondary leading-relaxed mb-3">
-              Invite friends from your school. More people means better, faster matches.
+              {raffleOpen
+                ? `Every ${RAFFLE.referralsPerEntry} friends who join and finish their profile puts your name in one more time.`
+                : "Invite friends from your school. More people means better, faster matches."}
             </p>
             {referralLink && (
               <div className="flex items-center gap-4">
@@ -599,7 +725,7 @@ function MatchDashboard({
       {/* Paid reroll — swaps this match for a new one immediately */}
       <RerollCard
         title="Not feeling it?"
-        body="Get a different match right now instead of waiting for Wednesday."
+        body={`Get a different match right now instead of waiting for Wednesday. One-time ${formatRerollPriceWithCurrency()} — not a subscription, and it doesn’t renew.`}
         {...reroll}
       />
 
@@ -973,6 +1099,14 @@ export default function DashboardPage() {
               setUser((prev) => (prev ? { ...prev, photoUrl: url } : null))
             }
           />
+        )}
+
+        {/* WaitlistDashboard carries the full card. Every other state gets the
+            compact strip, so the draw stays visible once matches drop. */}
+        {!isLoading && isOpen() && (hasMatch || isMutual || showMatchClosedCalm) && (
+          <div className="section-container pb-10">
+            <RaffleCard standing={user?.raffle} loading={false} compact />
+          </div>
         )}
       </main>
       <Footer />

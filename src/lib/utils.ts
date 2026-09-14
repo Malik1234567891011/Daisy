@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { randomBytes } from "crypto";
 
+// Plain clsx — no tailwind-merge, so conflicting utilities are not deduped.
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }

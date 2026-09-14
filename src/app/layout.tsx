@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     "weekly dating app students",
     "campus matching Montreal",
     "no swipe dating app",
-    "verified student dating",
+    "student dating Montreal",
     "McGill dating",
     "Concordia dating",
     "CEGEP dating Montreal",

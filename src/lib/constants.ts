@@ -79,7 +79,7 @@ export const WHY_DAISY = {
     {
       title: "Your campus, your people",
       description:
-        "Every member is a verified student. You'll match with real people from real schools.",
+        "Daisy is student-only. Everyone signs up with a school email address and confirms they're currently enrolled.",
     },
     {
       title: "Private until you're ready",
@@ -96,7 +96,7 @@ export const WHY_DAISY = {
 
 export const SAFETY = {
   /** Boxed lockup, same treatment as HOW_IT_WORKS: last word takes the accent. */
-  heading: { lead: "Verified. Private. ", accent: "Safe." },
+  heading: { lead: "Student-only. Private. ", accent: "Safe." },
   /**
    * Titles are stored as their own lines rather than as one string. The
    * reference breaks them by measure, and the three phrases are close enough
@@ -106,7 +106,7 @@ export const SAFETY = {
   items: [
     {
       label: "Safe #1",
-      title: ["Verified students", "at your school only"],
+      title: ["Students only,", "across Montreal"],
       art: "/safety/Verified_Private_Safe_01.webp",
     },
     {
@@ -126,12 +126,12 @@ export const FAQ_ITEMS: FAQItem[] = [
   {
     question: "Who can join Daisy?",
     answer:
-      "Daisy is exclusively for currently enrolled college and university students. You'll verify your status with a school email address during signup.",
+      "Daisy is for students who are currently enrolled at a university, college or CEGEP, and you must be 18 or older. You sign up with your school email address and confirm that you're currently enrolled.",
   },
   {
     question: "How does matching actually work?",
     answer:
-      "Every Wednesday at 6 PM, we release matches. We pair you with one person based on what matters to both of you — school, interests, intentions, and preferences. If you're both interested, we connect you. No swiping involved.",
+      "Every Wednesday at 6 PM we release matches — one person, with no feed to swipe through. We only pair two people when each of you fits what the other asked for: age range, gender preference, and any school, major or background preferences you both set. Among everyone who fits, we pick the person you have the most in common with — shared interests, what you're each looking for, and how you like to meet. We never repeat a pairing you've already had, and we review the week's matches before they go out. If you use a reroll, we run the same checks straight away and give you a new match on the spot. Either way, contact details are only revealed once you're both interested.",
   },
   {
     question: "What information do I have to share?",
@@ -161,7 +161,7 @@ export const FAQ_ITEMS: FAQItem[] = [
   {
     question: "Is Daisy free?",
     answer:
-      "Yes. Your weekly match, matching, and mutual connections are all free. The only thing you can pay for is a reroll — $1.99 to swap a match for a new one right away instead of waiting for next Wednesday. You never have to.",
+      "Yes. Your weekly match, the matching itself, and mutual connections are all free, and there is no subscription. The only optional purchase is a reroll: a one-time $1.99 CAD charge that swaps your current match for a new one right away instead of waiting for Wednesday. It is a single charge, it does not renew, and you never have to buy one.",
   },
 ];
 
@@ -194,7 +194,7 @@ export const SEO_CONTENT = {
     items: [
       {
         subtitle: "McGill, Concordia & Montreal Universities",
-        text: "Whether you're an undergrad at McGill, a graduate student at Concordia, studying at UdeM, or doing your MBA at HEC Montréal, Daisy Weekly connects you with students across Montreal's universities. Every member is verified through their school, so you know you're meeting real people.",
+        text: "Whether you're an undergrad at McGill, a graduate student at Concordia, studying at UdeM, or doing your MBA at HEC Montréal, Daisy Weekly connects you with students across Montreal's universities. Everyone signs up with a school email address and confirms they're currently enrolled.",
       },
       {
         subtitle: "CEGEP Students Across Greater Montreal",
@@ -229,6 +229,7 @@ export const FOOTER = {
     legal: [
       { label: "Privacy policy", href: "/privacy" },
       { label: "Terms of service", href: "/terms" },
+      { label: "Giveaway rules", href: "/giveaway" },
     ],
     connect: [
       { label: "Instagram", href: "https://instagram.com/daisyweeklymtl" },

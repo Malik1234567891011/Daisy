@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { normalizePhone } from "@/lib/phone";
 import { ShieldCheck } from "lucide-react";
 import Button from "@/components/ui/Button";
 
@@ -34,7 +35,6 @@ export default function StepOTP({ phone, smsConsent, onVerified, onBack }: StepO
     return () => clearTimeout(t);
   }, [cooldown]);
 
-  const toE164 = (raw: string) => `+${raw.replace(/\D/g, "")}`;
 
   const submitCode = useCallback(
     async (code: string) => {
@@ -45,7 +45,7 @@ export default function StepOTP({ phone, smsConsent, onVerified, onBack }: StepO
         const res = await fetch("/api/otp/verify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: toE164(phone), code, smsConsent }),
+          body: JSON.stringify({ phone: normalizePhone(phone) ?? phone, code, smsConsent }),
         });
 
         const data = await res.json();
@@ -131,7 +131,7 @@ export default function StepOTP({ phone, smsConsent, onVerified, onBack }: StepO
       const res = await fetch("/api/otp/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: toE164(phone) }),
+        body: JSON.stringify({ phone: normalizePhone(phone) ?? phone }),
       });
 
       const data = await res.json();
