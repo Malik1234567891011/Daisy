@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/wednesday-broadcast",
       "schedule": "0 22 * * 3"
+    },
+    {
+      "path": "/api/cron/wednesday-broadcast",
+      "schedule": "30 22 * * 3"
     }
   ]
 }

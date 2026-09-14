@@ -1,22 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
 import { prisma } from "@/lib/db";
+import { isAdminRequest } from "@/lib/admin-auth";
 
-const ADMIN_KEY = process.env.ADMIN_API_KEY;
 const twilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID!,
   process.env.TWILIO_AUTH_TOKEN!,
 );
 const FROM_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 
-function isAdmin(req: NextRequest): boolean {
-  const key = req.headers.get("x-admin-key");
-  return !!ADMIN_KEY && key === ADMIN_KEY;
-}
-
 // POST: Send match notification to a user
 export async function POST(req: NextRequest) {
-  if (!isAdmin(req)) {
+  if (!(await isAdminRequest(req))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -51,7 +46,7 @@ export async function POST(req: NextRequest) {
     ).replace(/\/$/, "");
     const body =
       customMessage ||
-      `Daisy 🌼 your match is ready. Open your dashboard: ${siteBase}/dashboard`;
+      `Daisy: your match is ready. Open your dashboard: ${siteBase}/dashboard`;
 
     const msg = await twilioClient.messages.create({
       to: user.phoneNumber,

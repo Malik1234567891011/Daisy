@@ -5,6 +5,10 @@ const DELAY_MS = 650;
 
 const TZ = "America/Toronto";
 
+/** A drop counts as "just happened" for this long. Shared by the recipient
+ *  query and the has-a-drop-happened guard so they can never disagree. */
+export const DROP_WINDOW_MS = 48 * 60 * 60 * 1000;
+
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -25,12 +29,13 @@ export function buildWednesdayBroadcastBody(): string {
       .replace(/\{\{URL\}\}/g, base)
       .replace(/\{\{EMAIL\}\}/g, support);
   }
+  // One GSM-7 segment (154 chars). Emoji or a curly apostrophe would push
+  // this into UCS-2, where a segment is 67 chars instead of 153 - the same
+  // text would then bill as 4 segments. Keep it plain ASCII.
   return (
-    "Daisy 🌼 your match is ready.\n\n" +
-    "Every Wednesday we match you with 1 student in Montreal.\n" +
-    "Open your dashboard to see them.\n\n" +
-    "If you both say yes, you'll unlock each other's contact.\n\n" +
-    `👉 ${dash}`
+    "Daisy: your match is ready. Open your dashboard to see them - " +
+    "if you both say yes, you unlock each other's contact.\n\n" +
+    dash
   );
 }
 
@@ -40,9 +45,12 @@ export function torontoDateKey(d: Date): string {
 }
 
 /**
- * True during Wednesday ~5:00–6:14 PM Toronto (first quarter of the 5pm or 6pm hour).
- * Vercel cron runs once at 22:00 UTC (`0 22 * * 3`): in summer that is 6:00 PM Toronto,
- * in winter 5:00 PM — one slot covers both without a second daily cron.
+ * True on Wednesday between 5:00 PM and 7:59 PM Toronto.
+ *
+ * Vercel cron fires at 22:00 UTC (`0 22 * * 3`): 6:00 PM in summer, 5:00 PM
+ * in winter. The window is three hours wide, not fifteen minutes, because
+ * cron delivery can slip — on the Hobby plan by up to an hour — and a missed
+ * window means nobody gets texted that week. Dedupe stops double sends.
  */
 export function isWednesdaySixPmTorontoWindow(now: Date): boolean {
   const weekday = new Intl.DateTimeFormat("en-US", {
@@ -55,13 +63,8 @@ export function isWednesdaySixPmTorontoWindow(now: Date): boolean {
     hour: "numeric",
     hour12: false,
   }).format(now);
-  const minuteStr = new Intl.DateTimeFormat("en-US", {
-    timeZone: TZ,
-    minute: "numeric",
-  }).format(now);
   const hour = parseInt(hourStr, 10);
-  const minute = parseInt(minuteStr, 10);
-  return (hour === 17 || hour === 18) && minute < 15;
+  return hour >= 17 && hour <= 19;
 }
 
 /**
@@ -73,16 +76,38 @@ export async function hasRecentPublicDrop(
   now: Date,
 ): Promise<boolean> {
   if (process.env.BROADCAST_REQUIRE_RECENT_DROP === "no") return true;
-  const since = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+  const since = new Date(now.getTime() - DROP_WINDOW_MS);
   const n = await prisma.match.count({
     where: { dropDate: { lte: now, gte: since } },
   });
   return n > 0;
 }
 
-export async function getWednesdayBroadcastRecipients(prisma: PrismaClient) {
+/**
+ * Only people who actually got a match in this drop. Texting every verified
+ * member "your match is ready" sends the unmatched ones to an empty
+ * dashboard. EXPIRED is excluded so a reroll from earlier in the week that
+ * the seed script just retired doesn't count as this week's drop.
+ */
+export async function getWednesdayBroadcastRecipients(
+  prisma: PrismaClient,
+  now: Date = new Date(),
+) {
+  const since = new Date(now.getTime() - DROP_WINDOW_MS);
+  const matches = await prisma.match.findMany({
+    where: {
+      dropDate: { lte: now, gte: since },
+      status: { not: "EXPIRED" },
+    },
+    select: { userAId: true, userBId: true },
+  });
+
+  const ids = [...new Set(matches.flatMap((m) => [m.userAId, m.userBId]))];
+  if (ids.length === 0) return [];
+
   return prisma.user.findMany({
     where: {
+      id: { in: ids },
       phoneVerified: true,
       phoneNumber: { not: null },
       smsConsent: true,

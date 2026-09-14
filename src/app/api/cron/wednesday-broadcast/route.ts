@@ -25,8 +25,9 @@ function authorizeCron(req: NextRequest): boolean {
 }
 
 /**
- * Vercel Cron: once on Wednesday 22:00 UTC (`0 22 * * 3`). Handler only sends during the
- * Wednesday 5:00–6:14 PM Toronto window (covers EST vs EDT). Manual: GET with Bearer CRON_SECRET.
+ * Vercel Cron: Wednesday 22:00 UTC (`0 22 * * 3`) with a retry at 22:30. Handler only sends
+ * during the Wednesday 5:00–7:59 PM Toronto window (covers EST vs EDT); the dedupe row makes
+ * the retry a no-op when the first run succeeded. Manual: GET with Bearer CRON_SECRET.
  *
  * Env: CRON_SECRET (required), Twilio + DATABASE_URL, optional BROADCAST_REQUIRE_RECENT_DROP=no
  */
@@ -71,7 +72,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const users = await getWednesdayBroadcastRecipients(prisma);
+    const users = await getWednesdayBroadcastRecipients(prisma, now);
     const result = await sendWednesdayBroadcastSms(prisma, users);
     return NextResponse.json({
       ok: true,

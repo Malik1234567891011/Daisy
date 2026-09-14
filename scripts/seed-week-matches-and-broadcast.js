@@ -305,6 +305,21 @@ function buildBody() {
     if (i < recipients.length - 1) await sleep(DELAY_MS);
   }
   console.log("\nSMS done. Sent:", ok, "Failed:", fail);
+
+  // Tell the Wednesday cron this drop is already texted, so matched users
+  // don't get a second "your match is ready" at 6 PM. Same key the cron
+  // uses (src/app/api/cron/wednesday-broadcast/route.ts). Prisma reconnects
+  // on its own after the earlier $disconnect().
+  if (ok > 0) {
+    const periodKey = new Date().toLocaleDateString("en-CA", { timeZone: "America/Toronto" });
+    await prisma.broadcastDedupe.upsert({
+      where: { job_periodKey: { job: "wednesday_match_sms", periodKey } },
+      create: { job: "wednesday_match_sms", periodKey },
+      update: {},
+    });
+    await prisma.$disconnect();
+    console.log("Recorded broadcast dedupe for " + periodKey + " — the cron will skip today.");
+  }
 })().catch(function (e) {
   console.error(e.message || e);
   process.exit(1);
