@@ -46,6 +46,7 @@ export interface AdminUserRow {
   email: string;
   firstName: string | null;
   school: string | null;
+  major: string | null;
   age: number | null;
   gender: string | null;
   genderPreference: string | null;
@@ -109,6 +110,7 @@ export interface AdminData {
   lookingFor: BreakdownItem[];
   ages: BreakdownItem[];
   schools: BreakdownItem[];
+  majors: BreakdownItem[];
   referrers: Referrer[];
 }
 
@@ -192,6 +194,7 @@ export function buildAdminData(rows: AdminUserRow[]): AdminData {
     lookingFor: toBreakdown(tally(verifiedUsers, (u) => u.genderPreference, "Unknown"), verified, byCountDesc),
     ages: toBreakdown(tally(verifiedUsers, (u) => (u.age ? String(u.age) : null), "?"), verified, byLabelNumeric),
     schools: toBreakdown(tally(verifiedUsers, (u) => u.school, "Unknown"), verified, byCountDesc),
+    majors: toBreakdown(tally(verifiedUsers, (u) => u.major, "Unknown"), verified, byCountDesc),
     referrers,
   };
 }

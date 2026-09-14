@@ -228,7 +228,7 @@ export default function AdminDashboard({
     return users.filter((u) => {
       if (!matchesFilter(u, filter)) return false;
       if (!q) return true;
-      return [u.firstName, u.email, u.school, u.referralCode, u.phoneNumber].some((v) =>
+      return [u.firstName, u.email, u.school, u.major, u.referralCode, u.phoneNumber].some((v) =>
         v?.toLowerCase().includes(q),
       );
     });
@@ -331,13 +331,10 @@ export default function AdminDashboard({
           <BreakdownPanel title="Looking for" items={data.lookingFor} />
           <BreakdownPanel title="Age" items={data.ages} labelWidth="w-10" />
         </div>
-        <BreakdownPanel
-          title="Schools"
-          items={data.schools}
-          labelWidth="w-[12rem]"
-          columns
-          className="mt-4"
-        />
+        <div className="mt-4 grid gap-4 md:grid-cols-2 md:items-start">
+          <BreakdownPanel title="Schools" items={data.schools} labelWidth="w-[11rem]" />
+          <BreakdownPanel title="Majors" items={data.majors} labelWidth="w-[11rem]" />
+        </div>
       </section>
 
       <section className="mt-14 space-y-4">

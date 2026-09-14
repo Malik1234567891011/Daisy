@@ -219,6 +219,9 @@ export default function ProfileViewer({
             </div>
 
             <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
+              {/* The hero line truncates both of these; here they read in full. */}
+              <Field label="School" value={user.school || "—"} muted={!user.school} />
+              <Field label="Major" value={user.major || "—"} muted={!user.major} />
               <Field label="Intentions" value={user.intentions || "—"} muted={!user.intentions} />
               <Field label="Vibe" value={user.vibe || "—"} muted={!user.vibe} />
               <Field

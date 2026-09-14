@@ -18,7 +18,7 @@ export default async function AdminPage() {
 
   const rows = await prisma.user.findMany({
     select: {
-      id: true, email: true, firstName: true, school: true, age: true,
+      id: true, email: true, firstName: true, school: true, major: true, age: true,
       gender: true, genderPreference: true, phoneNumber: true, phoneVerified: true,
       photoUrl: true, photoFacePresent: true, photoExplicit: true,
       photoCheckReason: true, photoCheckedAt: true,
