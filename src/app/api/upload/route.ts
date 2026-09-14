@@ -64,7 +64,15 @@ export async function POST(req: NextRequest) {
 
     await prisma.user.update({
       where: { id: userId },
-      data: { photoUrl },
+      data: {
+        photoUrl,
+        // Kept alongside the photo so /admin can tell a screened photo from
+        // one the check never ran on. Null when the model could not be asked.
+        photoFacePresent: verdict.inspection?.facePresent ?? null,
+        photoExplicit: verdict.inspection?.explicit ?? null,
+        photoCheckReason: verdict.inspection?.reason ?? null,
+        photoCheckedAt: verdict.inspection ? new Date() : null,
+      },
     });
 
     // Awaited, not fire-and-forget: the function can be frozen the moment

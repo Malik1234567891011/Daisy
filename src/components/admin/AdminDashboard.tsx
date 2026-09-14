@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import type { AdminData, AdminUser, BreakdownItem } from "@/lib/admin-stats";
-import { pct } from "@/lib/admin-stats";
+import { hasNoFace, pct } from "@/lib/admin-stats";
 import { cn } from "@/lib/utils";
 import AdminShell from "./AdminShell";
 import ProfileViewer from "./ProfileViewer";
@@ -25,7 +25,7 @@ import {
  * a time to the viewer.
  */
 
-type Filter = "all" | "verified" | "unverified" | "suspect" | "nophoto";
+type Filter = "all" | "verified" | "unverified" | "suspect" | "nophoto" | "noface";
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "Everyone" },
@@ -33,7 +33,65 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: "unverified", label: "Not verified" },
   { id: "suspect", label: "Suspect" },
   { id: "nophoto", label: "No photo" },
+  { id: "noface", label: "No face" },
 ];
+
+const DISMISSED_KEY = "daisy.admin.dismissedSuspects";
+const NONE_DISMISSED: ReadonlySet<string> = new Set();
+
+/**
+ * Suspect rows the operator has already cleared, kept in the browser rather
+ * than on the user row: it is one person's read of the list, not a fact about
+ * the account, and nothing outside this dashboard reads it. The set lives
+ * outside React so the snapshot stays stable between renders — the server
+ * always sees an empty one, so the list only thins out after hydration.
+ */
+let dismissedSnapshot: ReadonlySet<string> | null = null;
+const dismissedListeners = new Set<() => void>();
+
+function getDismissed(): ReadonlySet<string> {
+  if (!dismissedSnapshot) {
+    try {
+      const parsed: unknown = JSON.parse(window.localStorage.getItem(DISMISSED_KEY) ?? "[]");
+      dismissedSnapshot = new Set(
+        Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [],
+      );
+    } catch {
+      dismissedSnapshot = NONE_DISMISSED;
+    }
+  }
+  return dismissedSnapshot;
+}
+
+function setDismissed(next: ReadonlySet<string>) {
+  dismissedSnapshot = next;
+  try {
+    window.localStorage.setItem(DISMISSED_KEY, JSON.stringify([...next]));
+  } catch {
+    // Private window or a full quota: the list just won't survive a reload.
+  }
+  dismissedListeners.forEach((notify) => notify());
+}
+
+function subscribeDismissed(notify: () => void) {
+  dismissedListeners.add(notify);
+  return () => {
+    dismissedListeners.delete(notify);
+  };
+}
+
+function useDismissedSuspects() {
+  const dismissed = useSyncExternalStore(subscribeDismissed, getDismissed, () => NONE_DISMISSED);
+
+  const dismiss = useCallback((id: string) => setDismissed(new Set(getDismissed()).add(id)), []);
+  const restore = useCallback((id: string) => {
+    const next = new Set(getDismissed());
+    next.delete(id);
+    setDismissed(next);
+  }, []);
+
+  return { dismissed, dismiss, restore };
+}
 
 function matchesFilter(user: AdminUser, filter: Filter): boolean {
   switch (filter) {
@@ -45,6 +103,8 @@ function matchesFilter(user: AdminUser, filter: Filter): boolean {
       return user.suspect;
     case "nophoto":
       return !user.photoUrl;
+    case "noface":
+      return hasNoFace(user);
     default:
       return true;
   }
@@ -131,6 +191,8 @@ function UserCard({ user, onOpen }: { user: AdminUser; onOpen: () => void }) {
       <span className="mt-2.5 flex flex-wrap justify-center gap-1">
         <Tag tone={user.phoneVerified ? "ok" : "bad"}>{user.phoneVerified ? "phone" : "no phone"}</Tag>
         {user.suspect ? <Tag tone="warn">suspect</Tag> : null}
+        {hasNoFace(user) ? <Tag tone="bad">no face</Tag> : null}
+        {user.photoExplicit ? <Tag tone="bad">explicit</Tag> : null}
       </span>
     </button>
   );
@@ -147,17 +209,30 @@ export default function AdminDashboard({
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const [showDismissed, setShowDismissed] = useState(false);
+  const { dismissed, dismiss, restore } = useDismissedSuspects();
+
+  // A dismissed row reads as unsuspect everywhere downstream — the count, the
+  // filter, the card border, the viewer's tag — so nothing has to know about
+  // the set but this memo.
+  const users = useMemo(
+    () =>
+      dismissed.size === 0
+        ? data.users
+        : data.users.map((u) => (u.suspect && dismissed.has(u.id) ? { ...u, suspect: false } : u)),
+    [data.users, dismissed],
+  );
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return data.users.filter((u) => {
+    return users.filter((u) => {
       if (!matchesFilter(u, filter)) return false;
       if (!q) return true;
       return [u.firstName, u.email, u.school, u.referralCode, u.phoneNumber].some((v) =>
         v?.toLowerCase().includes(q),
       );
     });
-  }, [data.users, query, filter]);
+  }, [users, query, filter]);
 
   function openUser(id: string) {
     const i = visible.findIndex((u) => u.id === id);
@@ -169,7 +244,7 @@ export default function AdminDashboard({
     // the viewer's prev/next walk the whole list.
     setQuery("");
     setFilter("all");
-    setViewerIndex(data.users.findIndex((u) => u.id === id));
+    setViewerIndex(users.findIndex((u) => u.id === id));
   }
 
   const closeViewer = useCallback(() => setViewerIndex(null), []);
@@ -179,16 +254,29 @@ export default function AdminDashboard({
   }, [router]);
 
   const { totals } = data;
-  const stats: { label: string; value: number; sub?: number; tone?: "warn" | "bad" }[] = [
+  const suspects = users.filter((u) => u.suspect);
+  const noFace = users.filter(hasNoFace);
+  const dismissedSuspects = data.users.filter((u) => u.suspect && dismissed.has(u.id));
+  const stats: {
+    label: string;
+    value: number;
+    sub?: number;
+    /** Second line under the figure, for a count that needs no denominator. */
+    note?: string;
+    tone?: "warn" | "bad";
+  }[] = [
     { label: "Signups", value: totals.total },
     { label: "Phone verified", value: totals.verified, sub: pct(totals.verified, totals.total) },
     { label: "Onboarded", value: totals.onboarded, sub: pct(totals.onboarded, totals.total) },
-    { label: "With photo", value: totals.withPhoto, sub: pct(totals.withPhoto, totals.total) },
-    { label: "Suspect emails", value: totals.suspect, tone: totals.suspect ? "bad" : undefined },
+    {
+      label: "With photo",
+      value: totals.withPhoto,
+      sub: pct(totals.withPhoto, totals.total),
+      note: totals.noFace ? `${totals.noFace} with no face` : undefined,
+    },
+    { label: "Suspect emails", value: suspects.length, tone: suspects.length ? "bad" : undefined },
     { label: "Drop-offs", value: totals.dropoffs, sub: pct(totals.dropoffs, totals.total) },
   ];
-
-  const suspects = data.users.filter((u) => u.suspect);
 
   return (
     <AdminShell>
@@ -225,6 +313,7 @@ export default function AdminDashboard({
                 <span className="text-[13px] text-ivory/50">{s.sub}%</span>
               ) : null}
             </dd>
+            {s.note ? <dd className="mt-1 text-[12px] text-[#f0afaf]">{s.note}</dd> : null}
           </div>
         ))}
       </dl>
@@ -290,12 +379,76 @@ export default function AdminDashboard({
         <Panel>
           <SectionHeading
             eyebrow="Needs a look"
+            title="Photos with no face"
+            aside={
+              totals.photoUnchecked
+                ? `${noFace.length} flagged · ${totals.photoUnchecked} not screened yet`
+                : noFace.length
+                  ? "Nobody in frame, per the photo check"
+                  : undefined
+            }
+          />
+          <div className="mt-5">
+            {noFace.length === 0 ? (
+              <p className="text-[13px] text-ivory/45">
+                {totals.photoUnchecked
+                  ? `No flags yet — ${totals.photoUnchecked} photo(s) still to screen. Run scripts/scan-photo-faces.mjs --write --unchecked.`
+                  : "Every photo has a face in it."}
+              </p>
+            ) : (
+              <DataTable
+                head={
+                  <>
+                    <Th className="w-14">Photo</Th>
+                    <Th>Name</Th>
+                    <Th>Email</Th>
+                    <Th className="pr-0">What the check saw</Th>
+                  </>
+                }
+              >
+                {noFace.map((u) => (
+                  <tr
+                    key={u.id}
+                    onClick={() => openUser(u.id)}
+                    className="cursor-pointer transition-colors hover:bg-white/[0.04]"
+                  >
+                    <Td>
+                      {/* The thumbnail is the point: the verdict is worth a
+                          glance before anyone acts on it. */}
+                      {u.photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={u.photoUrl}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          className="h-9 w-9 rounded-full object-cover ring-1 ring-error/40"
+                        />
+                      ) : null}
+                    </Td>
+                    <Td className="font-medium text-ivory">{u.firstName || "?"}</Td>
+                    <Td className="text-ivory/70">{u.email}</Td>
+                    <Td className="pr-0 text-ivory/55">{u.photoCheckReason || "—"}</Td>
+                  </tr>
+                ))}
+              </DataTable>
+            )}
+          </div>
+        </Panel>
+
+        <Panel>
+          <SectionHeading
+            eyebrow="Needs a look"
             title="Suspect emails"
             aside={suspects.length ? "Not a school domain we know" : undefined}
           />
           <div className="mt-5">
             {suspects.length === 0 ? (
-              <p className="text-[13px] text-ivory/45">Every address is on a known school domain.</p>
+              <p className="text-[13px] text-ivory/45">
+                {dismissedSuspects.length
+                  ? "Nothing left to review."
+                  : "Every address is on a known school domain."}
+              </p>
             ) : (
               <DataTable
                 head={
@@ -303,7 +456,10 @@ export default function AdminDashboard({
                     <Th>Name</Th>
                     <Th>Email</Th>
                     <Th>School</Th>
-                    <Th className="pr-0 text-right">Phone</Th>
+                    <Th className="text-right">Phone</Th>
+                    <Th className="w-8 pr-0">
+                      <span className="sr-only">Hide</span>
+                    </Th>
                   </>
                 }
               >
@@ -316,13 +472,63 @@ export default function AdminDashboard({
                     <Td className="font-medium text-ivory">{u.firstName || "?"}</Td>
                     <Td className="text-ivory/70">{u.email}</Td>
                     <Td className="text-ivory/70">{u.school || "—"}</Td>
-                    <Td className="pr-0 text-right">
+                    <Td className="text-right">
                       <Tag tone={u.phoneVerified ? "ok" : "bad"}>{u.phoneVerified ? "yes" : "no"}</Tag>
+                    </Td>
+                    <Td className="pr-0">
+                      <button
+                        type="button"
+                        // The row opens the profile; the cross must not.
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          dismiss(u.id);
+                        }}
+                        title="Hide — this address is fine"
+                        className={cn(
+                          "flex h-7 w-7 items-center justify-center rounded-full text-ivory/35",
+                          "transition-colors duration-150 hover:bg-white/10 hover:text-ivory",
+                          "focus-visible:outline-2 focus-visible:outline-ivory focus-visible:outline-offset-2",
+                        )}
+                      >
+                        <span className="sr-only">Hide {u.email}</span>
+                        <X className="h-4 w-4" strokeWidth={2} aria-hidden />
+                      </button>
                     </Td>
                   </tr>
                 ))}
               </DataTable>
             )}
+
+            {dismissedSuspects.length ? (
+              <div className="mt-4 border-t border-white/10 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDismissed((v) => !v)}
+                  aria-expanded={showDismissed}
+                  className="text-[12px] text-ivory/45 transition-colors duration-200 hover:text-ivory/80"
+                >
+                  {dismissedSuspects.length} hidden &middot; {showDismissed ? "collapse" : "show"}
+                </button>
+                {showDismissed ? (
+                  <ul className="mt-3 space-y-2">
+                    {dismissedSuspects.map((u) => (
+                      <li key={u.id} className="flex items-center gap-3 text-[13px]">
+                        <span className="min-w-0 flex-1 truncate text-ivory/45">
+                          {u.firstName || "?"} &middot; {u.email}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => restore(u.id)}
+                          className="shrink-0 text-[12px] text-bloom transition-opacity duration-200 hover:opacity-75"
+                        >
+                          Restore
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </Panel>
       </section>

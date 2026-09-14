@@ -32,6 +32,14 @@ export function isSuspectEmail(email: string | null | undefined): boolean {
   return !SCHOOL_DOMAINS.some((d) => domain === d || domain.endsWith(`.${d}`));
 }
 
+/** The face check looked and found no one. Null means it never looked. */
+export function hasNoFace(user: {
+  photoUrl: string | null;
+  photoFacePresent: boolean | null;
+}): boolean {
+  return Boolean(user.photoUrl) && user.photoFacePresent === false;
+}
+
 /** The user row as the admin page fetches it. */
 export interface AdminUserRow {
   id: string;
@@ -44,6 +52,11 @@ export interface AdminUserRow {
   phoneNumber: string | null;
   phoneVerified: boolean;
   photoUrl: string | null;
+  /** Null on all four when the photo has never been screened. */
+  photoFacePresent: boolean | null;
+  photoExplicit: boolean | null;
+  photoCheckReason: string | null;
+  photoCheckedAt: Date | null;
   onboardingComplete: boolean;
   referralCode: string | null;
   referredBy: string | null;
@@ -55,8 +68,9 @@ export interface AdminUserRow {
   createdAt: Date;
 }
 
-export interface AdminUser extends Omit<AdminUserRow, "createdAt"> {
+export interface AdminUser extends Omit<AdminUserRow, "createdAt" | "photoCheckedAt"> {
   createdAt: string;
+  photoCheckedAt: string | null;
   suspect: boolean;
   /** Name of whoever owns `referredBy`, resolved once here. */
   referredByName: string | null;
@@ -84,6 +98,10 @@ export interface AdminData {
     verified: number;
     onboarded: number;
     withPhoto: number;
+    /** Photos the face check found nobody in. */
+    noFace: number;
+    /** Has a photo, but it predates the check and no scan has reached it. */
+    photoUnchecked: number;
     suspect: number;
     dropoffs: number;
   };
@@ -130,6 +148,7 @@ export function buildAdminData(rows: AdminUserRow[]): AdminData {
   const users: AdminUser[] = rows.map((row) => ({
     ...row,
     createdAt: row.createdAt.toISOString(),
+    photoCheckedAt: row.photoCheckedAt?.toISOString() ?? null,
     suspect: isSuspectEmail(row.email),
     referredByName: row.referredBy ? byCode.get(row.referredBy)?.firstName ?? null : null,
   }));
@@ -164,6 +183,8 @@ export function buildAdminData(rows: AdminUserRow[]): AdminData {
       verified,
       onboarded: rows.filter((u) => u.onboardingComplete).length,
       withPhoto: rows.filter((u) => u.photoUrl).length,
+      noFace: rows.filter(hasNoFace).length,
+      photoUnchecked: rows.filter((u) => u.photoUrl && !u.photoCheckedAt).length,
       suspect: users.filter((u) => u.suspect).length,
       dropoffs: total - verified,
     },

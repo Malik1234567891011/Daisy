@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Maximize2, Trash2, X } from "lucide-react";
 import type { AdminUser } from "@/lib/admin-stats";
+import { hasNoFace } from "@/lib/admin-stats";
 import { cn } from "@/lib/utils";
 import { GlassIconButton, Tag, formatDate, initialOf } from "./primitives";
 import { parseIdealHangouts } from "@/lib/idealHangouts";
@@ -10,7 +11,8 @@ import { parseIdealHangouts } from "@/lib/idealHangouts";
 /**
  * One profile at a time, in the same portrait card the sign-in screen uses:
  * a frosted bezel, a photograph filling the top, and the facts on an ink slab
- * underneath. Arrow keys page through the list; Escape closes.
+ * underneath. The card crops the photo to fit, so clicking it opens the whole
+ * frame uncropped. Arrow keys page through the list; Escape closes.
  */
 
 interface ProfileViewerProps {
@@ -51,8 +53,15 @@ export default function ProfileViewer({
 }: ProfileViewerProps) {
   const user = users[index];
   const [confirming, setConfirming] = useState(false);
+  const [zoomed, setZoomed] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
+
+  // Paging keeps the blown-up photo open — it is the fastest way to scan the
+  // lot — but a profile with no photo has nothing to hold it open.
+  useEffect(() => {
+    if (!user?.photoUrl) setZoomed(false);
+  }, [user?.photoUrl]);
 
   // A half-finished delete must not carry over to the next profile.
   useEffect(() => {
@@ -63,8 +72,10 @@ export default function ProfileViewer({
   useEffect(() => {
     const count = users.length;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      else if (e.key === "ArrowLeft") onIndexChange((index - 1 + count) % count);
+      if (e.key === "Escape") {
+        if (zoomed) setZoomed(false);
+        else onClose();
+      } else if (e.key === "ArrowLeft") onIndexChange((index - 1 + count) % count);
       else if (e.key === "ArrowRight") onIndexChange((index + 1) % count);
     };
     document.addEventListener("keydown", onKey);
@@ -74,7 +85,7 @@ export default function ProfileViewer({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = previous;
     };
-  }, [index, users.length, onIndexChange, onClose]);
+  }, [index, users.length, onIndexChange, onClose, zoomed]);
 
   if (!user) return null;
 
@@ -128,12 +139,15 @@ export default function ProfileViewer({
           {/* The photograph takes whatever height the facts leave it. */}
           <div className="relative min-h-0 flex-1 bg-ink-soft">
             {user.photoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={user.photoUrl}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover"
-              />
+              <button
+                type="button"
+                onClick={() => setZoomed(true)}
+                aria-label={`See ${heading}'s photo uncropped`}
+                className="absolute inset-0 block cursor-zoom-in"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={user.photoUrl} alt="" className="h-full w-full object-cover" />
+              </button>
             ) : (
               <div className="absolute inset-0 flex items-center justify-center font-display text-[140px] leading-none text-ivory/15">
                 {initialOf(user.firstName)}
@@ -141,11 +155,11 @@ export default function ProfileViewer({
             )}
             <div
               aria-hidden
-              className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-ink via-ink/60 to-transparent"
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-ink via-ink/60 to-transparent"
             />
             <div
               aria-hidden
-              className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-ink/60 to-transparent"
+              className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-ink/60 to-transparent"
             />
 
             <div className="absolute inset-x-3 top-3 flex items-center justify-between">
@@ -157,9 +171,16 @@ export default function ProfileViewer({
                   <ChevronRight className="h-5 w-5" strokeWidth={1.75} aria-hidden />
                 </GlassIconButton>
               </div>
-              <GlassIconButton onClick={onClose} aria-label="Close">
-                <X className="h-5 w-5" strokeWidth={1.75} aria-hidden />
-              </GlassIconButton>
+              <div className="flex gap-2">
+                {user.photoUrl ? (
+                  <GlassIconButton onClick={() => setZoomed(true)} aria-label="See the photo uncropped">
+                    <Maximize2 className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden />
+                  </GlassIconButton>
+                ) : null}
+                <GlassIconButton onClick={onClose} aria-label="Close">
+                  <X className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+                </GlassIconButton>
+              </div>
             </div>
 
             <div className="absolute inset-x-5 bottom-4">
@@ -169,6 +190,8 @@ export default function ProfileViewer({
                   {user.age ? `, ${user.age}` : ""}
                 </h2>
                 {user.suspect ? <Tag tone="warn">suspect email</Tag> : null}
+                {hasNoFace(user) ? <Tag tone="bad">no face</Tag> : null}
+                {user.photoExplicit ? <Tag tone="bad">explicit</Tag> : null}
               </div>
               <p className="mt-2 truncate text-[13px] text-ivory/75">{user.email}</p>
               <p className="mt-0.5 truncate text-[13px] text-ivory/55">
@@ -214,6 +237,18 @@ export default function ProfileViewer({
                 muted={!user.referralCode}
               />
               <Field label="Referred by" value={referredBy || "—"} muted={!referredBy} />
+              <Field
+                label="Photo check"
+                value={
+                  !user.photoUrl
+                    ? "no photo"
+                    : !user.photoCheckedAt
+                      ? "not screened"
+                      : `${hasNoFace(user) ? "no face" : "face"} — ${user.photoCheckReason || "no reason given"}`
+                }
+                muted={!user.photoCheckedAt}
+                className="col-span-2"
+              />
               <Field
                 label="Interests"
                 value={user.interests.length ? user.interests.join(", ") : "—"}
@@ -270,6 +305,37 @@ export default function ProfileViewer({
           </div>
         </div>
       </div>
+
+      {zoomed && user.photoUrl ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${heading} — full photo`}
+          onClick={() => setZoomed(false)}
+          className="absolute inset-0 z-20 flex cursor-zoom-out items-center justify-center bg-ink/95 p-4 backdrop-blur-md sm:p-10"
+        >
+          {/* Contained, not cropped: the whole frame, whatever shape it is. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={user.photoUrl}
+            alt={`${heading}, full photo`}
+            className="max-h-full max-w-full rounded-[18px] object-contain shadow-[0_28px_80px_rgba(0,0,0,0.55)]"
+          />
+          <GlassIconButton
+            onClick={(e) => {
+              e.stopPropagation();
+              setZoomed(false);
+            }}
+            aria-label="Close the full photo"
+            className="absolute right-4 top-4 sm:right-6 sm:top-6"
+          >
+            <X className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+          </GlassIconButton>
+          <p className="pointer-events-none absolute inset-x-0 bottom-4 text-center text-[12px] text-ivory/45">
+            {heading} &middot; click anywhere or press Esc to go back
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }

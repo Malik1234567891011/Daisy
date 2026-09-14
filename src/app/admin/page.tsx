@@ -20,7 +20,9 @@ export default async function AdminPage() {
     select: {
       id: true, email: true, firstName: true, school: true, age: true,
       gender: true, genderPreference: true, phoneNumber: true, phoneVerified: true,
-      photoUrl: true, onboardingComplete: true, referralCode: true, referredBy: true,
+      photoUrl: true, photoFacePresent: true, photoExplicit: true,
+      photoCheckReason: true, photoCheckedAt: true,
+      onboardingComplete: true, referralCode: true, referredBy: true,
       intentions: true, vibe: true, interests: true, idealHangout: true,
       rerollCredits: true, createdAt: true,
     },

@@ -21,6 +21,9 @@ const verdictSchema = z.object({
   reason: z.string().describe("at most 8 words, for server logs"),
 });
 
+/** What the model saw, before any policy is applied to it. */
+export type PhotoInspection = z.infer<typeof verdictSchema>;
+
 const PROMPT = `You are screening a photo someone uploaded as their dating profile picture.
 
 Answer two questions.
@@ -41,19 +44,28 @@ When you are unsure, answer facePresent true and explicit false. A wrongly
 rejected photo is a much worse outcome than a wrongly accepted one.`;
 
 export type PhotoVerdict =
-  | { ok: true }
-  | { ok: false; code: "no_face" | "explicit"; message: string };
+  | { ok: true; inspection: PhotoInspection | null }
+  | {
+      ok: false;
+      code: "no_face" | "explicit";
+      message: string;
+      inspection: PhotoInspection;
+    };
 
-const ACCEPT: PhotoVerdict = { ok: true };
-
-export async function checkProfilePhoto(
+/**
+ * Asks the model what is in the photo. Returns null when the question could
+ * not be asked at all — no API key, a timeout, an outage at Google. Callers
+ * decide what an unknown means: the upload gate lets the photo through, the
+ * admin scan leaves the row marked unchecked.
+ */
+export async function inspectPhoto(
   image: Buffer,
   mediaType: string,
-): Promise<PhotoVerdict> {
+): Promise<PhotoInspection | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.warn("photoCheck: GEMINI_API_KEY missing, skipping face check");
-    return ACCEPT;
+    return null;
   }
 
   const google = createGoogleGenerativeAI({ apiKey });
@@ -74,28 +86,41 @@ export async function checkProfilePhoto(
       ],
     });
 
-    if (output.explicit) {
-      console.log("photoCheck: rejected explicit —", output.reason);
-      return {
-        ok: false,
-        code: "explicit",
-        message: "Let's keep it PG. Try a different photo.",
-      };
-    }
-
-    if (!output.facePresent) {
-      console.log("photoCheck: rejected no face —", output.reason);
-      return {
-        ok: false,
-        code: "no_face",
-        message: "We couldn't find a face in that one. Try a photo of you.",
-      };
-    }
-
-    return ACCEPT;
+    return output;
   } catch (error) {
-    // Fail open: a timeout or an outage at Google must never block a signup.
-    console.error("photoCheck: check failed, allowing upload —", error);
-    return ACCEPT;
+    console.error("photoCheck: check failed —", error);
+    return null;
   }
+}
+
+export async function checkProfilePhoto(
+  image: Buffer,
+  mediaType: string,
+): Promise<PhotoVerdict> {
+  const inspection = await inspectPhoto(image, mediaType);
+
+  // Fail open: a timeout or an outage at Google must never block a signup.
+  if (!inspection) return { ok: true, inspection: null };
+
+  if (inspection.explicit) {
+    console.log("photoCheck: rejected explicit —", inspection.reason);
+    return {
+      ok: false,
+      code: "explicit",
+      message: "Let's keep it PG. Try a different photo.",
+      inspection,
+    };
+  }
+
+  if (!inspection.facePresent) {
+    console.log("photoCheck: rejected no face —", inspection.reason);
+    return {
+      ok: false,
+      code: "no_face",
+      message: "We couldn't find a face in that one. Try a photo of you.",
+      inspection,
+    };
+  }
+
+  return { ok: true, inspection };
 }

@@ -24,6 +24,14 @@ model User {
   ethnicity     String?
   photoUrl      String?
 
+  // Profile photo screening. Null on every field means the photo has never
+  // been looked at — the gate in /api/upload only exists for photos uploaded
+  // after it shipped, so scripts/scan-photo-faces.mjs fills in the rest.
+  photoFacePresent Boolean?
+  photoExplicit    Boolean?
+  photoCheckReason String?
+  photoCheckedAt   DateTime?
+
   // Personality & compatibility signals
   intentions    String?   // casual / serious / friends / open
   vibe          String?   // homebody / social / balanced

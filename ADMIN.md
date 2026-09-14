@@ -7,6 +7,25 @@ Quick commands for managing the database and users. Run all commands from the `d
 
 ---
 
+## Screen profile photos for faces
+
+Photos uploaded before the face check shipped were never screened. This runs
+every stored photo past the same Gemini check `/api/upload` uses and records
+the verdict on the user, which is what the **Photos with no face** panel on
+`/admin` lists.
+
+```bash
+node scripts/scan-photo-faces.mjs                     # scan, report, change nothing
+node scripts/scan-photo-faces.mjs --write             # record each verdict on the user
+node scripts/scan-photo-faces.mjs --write --unchecked # only users with no verdict yet
+```
+
+`--limit N`, `--concurrency N` (default 8) and `--out report.json` also work.
+A photo the model could not be asked about — timeout, outage — is left
+unchecked rather than recorded as a pass, so `--unchecked` picks it up on the
+next run. Nothing is deleted and no photo is removed: the panel is a list to
+look at, not an action.
+
 ## Query all users
 
 ```bash
