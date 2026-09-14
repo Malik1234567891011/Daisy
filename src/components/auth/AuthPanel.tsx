@@ -13,6 +13,11 @@ import { cn } from "@/lib/utils";
  * inverts completely, and the two sets share no useful middle ground.
  */
 
+/** The slab's surface, without padding. Exported so the dashboard can lay
+ *  the same material with its own, denser spacing. */
+export const AUTH_PANEL_SURFACE =
+  "rounded-[18px] border border-white/10 bg-[rgba(17,21,14,0.86)] backdrop-blur-md";
+
 /** Near-opaque on purpose: it is a slab laid on the photo, not a tint of it. */
 export function AuthPanel({
   className,
@@ -22,13 +27,7 @@ export function AuthPanel({
   children: React.ReactNode;
 }) {
   return (
-    <div
-      className={cn(
-        "rounded-[18px] border border-white/10 bg-[rgba(17,21,14,0.86)]",
-        "px-5 pb-7 pt-6 backdrop-blur-md sm:px-6",
-        className,
-      )}
-    >
+    <div className={cn(AUTH_PANEL_SURFACE, "px-5 pb-7 pt-6 sm:px-6", className)}>
       {children}
     </div>
   );

@@ -10,7 +10,6 @@ import {
   hasLiveMatch,
   lockUsers,
   openMatch,
-  rematchFree,
 } from "@/lib/matching";
 import { grantRerollCredit } from "@/lib/reroll-credits";
 import { notifyNewMatch } from "@/lib/sms";
@@ -21,8 +20,8 @@ export const runtime = "nodejs";
 class AlreadySpentError extends Error {}
 
 /**
- * Spend one reroll credit: close the current match (if it's still open) and
- * open a new one.
+ * Spend one reroll credit: open a new match in place of the one that closed
+ * this week. A live match can't be rerolled — see getRerollTarget.
  *
  * Separate from checkout on purpose — the credit is the unit of value, so a
  * payment that can't be fulfilled immediately (empty pool, webhook lag,
@@ -96,7 +95,9 @@ export async function POST(req: Request) {
         error:
           target.reason === "mutual"
             ? "You already matched with this person — nothing to reroll."
-            : "You don't have a match to reroll right now.",
+            : target.reason === "pending"
+              ? "Answer your current match first. Rerolls open up once a match closes."
+              : "You don't have a match to reroll right now.",
       },
       { status: 400 },
     );
@@ -134,20 +135,10 @@ export async function POST(req: Request) {
           throw new AlreadySpentError("credit already spent");
         }
 
-        let rerolledPartnerId: string | null = null;
-        if (target.status === "PENDING") {
-          // Same guard for the match, so a double-submit can't reroll twice.
-          const closed = await tx.match.updateMany({
-            where: { id: target.matchId, status: "PENDING" },
-            data: { status: "REROLLED", rerolledByUserId: userId },
-          });
-          if (closed.count !== 1) {
-            throw new AlreadySpentError("match already resolved");
-          }
-          rerolledPartnerId = target.partnerId;
-        } else if (await hasLiveMatch(tx, userId)) {
-          // Rerolling out of a closed match, but something (a free rematch,
-          // an admin) already gave this user a live one in the meantime.
+        // Rerolling out of a closed match, but something (a free rematch, an
+        // admin, the Wednesday drop) already gave this user a live one in
+        // the meantime. That one has to be answered first.
+        if (await hasLiveMatch(tx, userId)) {
           throw new AlreadySpentError("already matched");
         }
 
@@ -165,21 +156,12 @@ export async function POST(req: Request) {
           });
         }
 
-        return { matchId: created.id, rerolledPartnerId };
+        return { matchId: created.id };
       });
 
-      // After commit. The person rerolled away from did nothing wrong, so
-      // try to hand them someone new for free; then text everyone who just
-      // got a match, since nobody refreshes a dashboard on a Thursday.
-      const rematch = result.rerolledPartnerId
-        ? await rematchFree(result.rerolledPartnerId)
-        : null;
-
-      const texts = [notifyNewMatch(candidateId)];
-      if (rematch && result.rerolledPartnerId) {
-        texts.push(notifyNewMatch(result.rerolledPartnerId), notifyNewMatch(rematch.partnerId));
-      }
-      await Promise.all(texts);
+      // After commit: text the person who just got a match, since nobody
+      // refreshes a dashboard on a Thursday.
+      await notifyNewMatch(candidateId);
 
       return NextResponse.json({ matchId: result.matchId });
     } catch (error) {

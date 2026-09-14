@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import Providers from "./providers";
 import Analytics from "@/components/Analytics";
@@ -59,6 +59,13 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+};
+
+// Tints the browser chrome (Safari's address bar, Chrome's status bar) to
+// match the ink ground, so phones show a dark band above every page instead
+// of sampling white off the light ones.
+export const viewport: Viewport = {
+  themeColor: "#14180F",
 };
 
 export default function RootLayout({

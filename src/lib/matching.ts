@@ -88,17 +88,20 @@ export type RerollTarget =
   | {
       ok: true;
       matchId: string;
-      /** PENDING gets closed by the reroll; DECLINED/REROLLED are left as they are. */
-      status: "PENDING" | "DECLINED" | "REROLLED";
+      /** The closed match being replaced. It is left as it is. */
+      status: "DECLINED" | "REROLLED";
       partnerId: string;
     }
-  | { ok: false; reason: "no-match" | "mutual" };
+  | { ok: false; reason: "no-match" | "mutual" | "pending" };
 
 /**
- * The match a reroll would replace. This week's live PENDING match, or a
- * match that closed this week — you passed, they passed, or they rerolled
- * away — so the person who just clicked "Not for me" can still buy a new one
- * instead of waiting for Wednesday. A MUTUAL match is never rerollable: that
+ * The match a reroll would replace: one that closed this week — you passed,
+ * they passed, or they rerolled away — so the person who just clicked "Not
+ * for me" can buy a new one instead of waiting for Wednesday.
+ *
+ * A live PENDING match is deliberately not rerollable. The product rule is
+ * that you answer the person in front of you first; a reroll is what you do
+ * after a no, not instead of one. A MUTUAL match is never rerollable: that
  * one worked.
  */
 export async function getRerollTarget(userId: string): Promise<RerollTarget> {
@@ -117,9 +120,7 @@ export async function getRerollTarget(userId: string): Promise<RerollTarget> {
 
   const partnerId = match.userAId === userId ? match.userBId : match.userAId;
 
-  if (match.status === "PENDING") {
-    return { ok: true, matchId: match.id, status: "PENDING", partnerId };
-  }
+  if (match.status === "PENDING") return { ok: false, reason: "pending" };
 
   const recent = match.dropDate.getTime() >= now.getTime() - CLOSED_MATCH_WINDOW_MS;
   if (recent && (match.status === "DECLINED" || match.status === "REROLLED")) {

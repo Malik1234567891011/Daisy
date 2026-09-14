@@ -11,6 +11,8 @@ export type PartnerRecord = {
   firstName: string | null;
   age: number | null;
   school: string | null;
+  /** Optional so older fixtures and callers keep compiling. */
+  major?: string | null;
   photoUrl: string | null;
   intentions: string | null;
   vibe: string | null;
@@ -34,6 +36,7 @@ export function partnerPayload(partner: PartnerRecord, isMutual: boolean): Partn
     firstName: partner.firstName,
     age: partner.age,
     school: partner.school,
+    major: partner.major ?? null,
     photoUrl: partner.photoUrl,
     intentions: partner.intentions,
     vibe: partner.vibe,

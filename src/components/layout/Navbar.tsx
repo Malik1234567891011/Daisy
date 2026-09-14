@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { NAV_LINKS } from "@/lib/constants";
@@ -14,8 +15,12 @@ interface NavbarProps {
    * scroll — it never takes a background, and only the call to action changes.
    * Every other page has a light background and wants "solid" from the first
    * pixel.
+   *
+   * "dark" is for the signed-in screens, which sit on the ink wallpaper:
+   * transparent at the top like "over", but it fills in with frosted ink once
+   * scrolled so card text never collides with the logo.
    */
-  tone?: "solid" | "over";
+  tone?: "solid" | "over" | "dark";
 }
 
 export default function Navbar({ tone = "solid" }: NavbarProps) {
@@ -30,15 +35,21 @@ export default function Navbar({ tone = "solid" }: NavbarProps) {
   }, []);
 
   const overlay = tone === "over";
+  const dark = tone === "dark";
+  const onDark = overlay || dark;
+  const pathname = usePathname();
+  const onDashboard = pathname === "/dashboard";
 
   // Variants, not className overrides: `cn` is plain clsx, so an override
   // like `bg-ivory` would sit alongside the variant's `bg-sage` and lose to
   // stylesheet order.
-  const ghostVariant = overlay ? "onDarkQuiet" : "ghost";
+  const ghostVariant = onDark ? "onDarkQuiet" : "ghost";
   // Over the hero the CTA is glass; past the first screen it fills in solid
   // with accent text. That swap is the only thing marking scroll progress,
   // since the bar itself never takes a background.
-  const solidVariant = overlay ? (scrolled ? "onDarkAccent" : "onDark") : "primary";
+  const solidVariant = overlay
+    ? scrolled ? "onDarkAccent" : "onDark"
+    : dark ? "onDark" : "primary";
 
   // On phones the primary action is withheld until you have scrolled — the
   // hero already carries a full-width enrol form, so a second competing call
@@ -56,7 +67,11 @@ export default function Navbar({ tone = "solid" }: NavbarProps) {
           // occupies a pixel of flow, which left a hairline of page
           // background showing above the hero.
           ? "bg-transparent border-b-0"
-          : scrolled
+          : dark
+            ? scrolled
+              ? "bg-ink/75 backdrop-blur-xl border-b border-ivory/10"
+              : "bg-transparent border-b-0"
+            : scrolled
             ? "bg-ivory/80 backdrop-blur-xl border-b border-border-light/60 shadow-sm"
             : "bg-ivory/80 backdrop-blur-xl border-b border-transparent",
       )}
@@ -76,7 +91,7 @@ export default function Navbar({ tone = "solid" }: NavbarProps) {
         className="section-container relative flex h-[var(--nav-h)] items-center justify-between"
         aria-label="Main navigation"
       >
-        <DaisyLogo size="md" tone={overlay ? "light" : "dark"} />
+        <DaisyLogo size="md" tone={onDark ? "light" : "dark"} />
 
         <ul className="hidden lg:flex items-center gap-9" role="list">
           {NAV_LINKS.map((link) => (
@@ -85,7 +100,7 @@ export default function Navbar({ tone = "solid" }: NavbarProps) {
                 href={link.href}
                 className={cn(
                   "relative text-[13px] tracking-wide transition-colors duration-200",
-                  overlay
+                  onDark
                     ? "text-ivory/75 hover:text-ivory"
                     : "text-text-secondary hover:text-charcoal",
                 )}
@@ -124,9 +139,21 @@ export default function Navbar({ tone = "solid" }: NavbarProps) {
 
         <div className="flex items-center gap-2 lg:hidden">
           {isLoggedIn ? (
-            <Button variant={solidVariant} href="/dashboard" size="sm">
-              Dashboard
-            </Button>
+            /* A "Dashboard" button on the dashboard itself goes nowhere, so
+               that page gets the other thing the desktop bar offers. */
+            onDashboard ? (
+              <Button
+                variant={ghostVariant}
+                size="sm"
+                onClick={() => signOut({ callbackUrl: "/" })}
+              >
+                Sign out
+              </Button>
+            ) : (
+              <Button variant={solidVariant} href="/dashboard" size="sm">
+                Dashboard
+              </Button>
+            )
           ) : (
             <>
               <Button variant={ghostVariant} href="/login" size="sm">

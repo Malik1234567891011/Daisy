@@ -45,8 +45,8 @@ export async function POST(req: Request) {
     );
   }
 
-  // This week's match — live, or closed by either side — can be rerolled.
-  // MUTUAL matches are off the table: that one worked.
+  // Only a match that closed this week can be rerolled. A live one has to
+  // be answered first, and a MUTUAL one worked.
   const target = await getRerollTarget(user.id);
   if (!target.ok) {
     return NextResponse.json(
@@ -54,7 +54,9 @@ export async function POST(req: Request) {
         error:
           target.reason === "mutual"
             ? "You already matched with this person — nothing to reroll."
-            : "You don't have a match to reroll right now.",
+            : target.reason === "pending"
+              ? "Answer your current match first. Rerolls open up once a match closes."
+              : "You don't have a match to reroll right now.",
       },
       { status: 400 },
     );

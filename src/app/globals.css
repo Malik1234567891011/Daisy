@@ -91,6 +91,13 @@
     }
   }
 
+  /* Black ground on the root as well as the body: Safari paints the
+     rubber-band area above the page from the root's background, and with
+     only the body set it can still flash white at the top of a pull. */
+  html {
+    background-color: var(--color-ink);
+  }
+
   body {
     font-family: var(--font-body);
     /* Black ground. Every light page sets its own background on its root
@@ -560,3 +567,363 @@
 /* The native option menu is drawn by the OS and ignores the field's colours,
    so it needs its own light pairing or it renders white on white. */
 .auth-dark option { color: #1e2420; background-color: #fff; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Reroll teaser
+
+   One blurred portrait card, floating. The photograph is blurred in the file
+   itself; the small CSS blur on the art only softens it further and hides
+   the resize seam. The blur is on the artwork, not the card, so the rounded
+   edge and shadow stay crisp — a blurred outline reads as a rendering bug.
+   ───────────────────────────────────────────────────────────────────────── */
+@layer components {
+  .reroll-stage {
+    position: relative;
+    height: 250px;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 45%, rgba(232, 199, 126, 0.14), transparent 70%),
+      linear-gradient(180deg, rgba(255, 253, 247, 0.04), transparent);
+  }
+
+  .reroll-glow {
+    position: absolute;
+    left: 50%;
+    top: 52%;
+    width: 260px;
+    height: 260px;
+    transform: translate(-50%, -50%);
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(232, 199, 126, 0.26), transparent 62%);
+    filter: blur(18px);
+    animation: reroll-breathe 5s ease-in-out infinite;
+  }
+
+  .reroll-card {
+    position: absolute;
+    left: 50%;
+    top: 54%;
+    width: 168px;
+    aspect-ratio: 4 / 5;
+    border-radius: 20px;
+    overflow: hidden;
+    background: var(--color-ink-soft);
+    border: 1px solid rgba(255, 253, 247, 0.28);
+    box-shadow:
+      0 22px 48px rgba(20, 24, 15, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    transform: translate(-50%, -50%) rotate(-3deg);
+    animation: reroll-float 6s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  /* While the reroll is in flight the card shivers, quick and small — the
+     hand being dealt — instead of drifting. */
+  .reroll-stage[data-rerolling] .reroll-card {
+    animation: reroll-shiver 0.5s ease-in-out infinite;
+  }
+
+  /* Oversized and blurred a touch more so no edge of the file ever shows. */
+  /* Explicit size with the preflight `max-width: 100%` lifted: an absolutely
+     positioned replaced element ignores `inset` for its width and falls back
+     to its intrinsic size, then the clamp shrinks it to the card and leaves a
+     gap down the right-hand edge. */
+  .reroll-card-art {
+    position: absolute;
+    top: -8%;
+    left: -8%;
+    width: 116%;
+    max-width: none;
+    height: 116%;
+    object-fit: cover;
+    filter: blur(6px) saturate(1.1);
+    user-select: none;
+    -webkit-user-select: none;
+    pointer-events: none;
+  }
+
+  /* A slow catchlight drifting across the card. */
+  .reroll-card-shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.4) 50%, transparent 70%);
+    background-size: 250% 100%;
+    animation: reroll-shine 5s ease-in-out infinite;
+    mix-blend-mode: soft-light;
+  }
+
+  .reroll-fade {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 64px;
+    background: linear-gradient(180deg, transparent, rgba(17, 21, 14, 0.96));
+    pointer-events: none;
+  }
+
+  .reroll-badge {
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 11px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--color-ivory);
+    background: rgba(20, 24, 15, 0.6);
+    border: 1px solid rgba(255, 253, 247, 0.2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    white-space: nowrap;
+  }
+
+  /* The pill breathes a ring of bloom, so the eye lands there after the card. */
+  .reroll-cta {
+    position: relative;
+    overflow: hidden;
+    animation: reroll-pulse 2.8s ease-out infinite;
+  }
+  .reroll-cta:disabled {
+    animation: none;
+  }
+
+  /* ── Ready state: a reroll is already paid for ──
+     The card rocks instead of drifting, the glow runs hotter, sparks pop
+     around the card, and a gold shimmer sweeps the pill every couple of
+     seconds. Louder on purpose: this is money already spent, waiting. */
+  .reroll-stage[data-ready] .reroll-glow {
+    background: radial-gradient(circle, rgba(232, 199, 126, 0.42), transparent 62%);
+    animation: reroll-breathe 2.2s ease-in-out infinite;
+  }
+  .reroll-stage[data-ready] .reroll-card {
+    animation: reroll-rock 2.4s ease-in-out infinite;
+    box-shadow:
+      0 22px 48px rgba(20, 24, 15, 0.5),
+      0 0 0 1px rgba(232, 199, 126, 0.35),
+      0 0 32px rgba(232, 199, 126, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+  .reroll-stage[data-ready] .reroll-card-shine {
+    animation-duration: 2s;
+  }
+
+  .reroll-sparks {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .reroll-spark {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    margin: -5px 0 0 -5px;
+    background: var(--color-bloom);
+    /* Four-point star. */
+    clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+    opacity: 0;
+    animation: reroll-spark 3.6s ease-out infinite;
+    filter: drop-shadow(0 0 6px rgba(232, 199, 126, 0.9));
+  }
+
+  .reroll-cta-ready {
+    animation: reroll-pulse-hot 1.6s ease-out infinite;
+  }
+  .reroll-cta-ready::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      110deg,
+      transparent 30%,
+      rgba(232, 199, 126, 0.55) 45%,
+      rgba(255, 253, 247, 0.9) 50%,
+      rgba(232, 199, 126, 0.55) 55%,
+      transparent 70%
+    );
+    transform: translateX(-120%);
+    animation: reroll-sheen 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    pointer-events: none;
+  }
+
+  @keyframes reroll-float {
+    0%, 100% { transform: translate(-50%, -50%) rotate(-3deg); }
+    50%      { transform: translate(-50%, calc(-50% - 8px)) rotate(-1deg); }
+  }
+
+  @keyframes reroll-shiver {
+    0%, 100% { transform: translate(-50%, -50%) rotate(-3deg); }
+    25%      { transform: translate(calc(-50% - 4px), -50%) rotate(-5deg); }
+    75%      { transform: translate(calc(-50% + 4px), -50%) rotate(-1deg); }
+  }
+
+  @keyframes reroll-shine {
+    0%   { background-position: 120% 0; }
+    100% { background-position: -120% 0; }
+  }
+
+  @keyframes reroll-breathe {
+    0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
+    50%      { opacity: 1;   transform: translate(-50%, -50%) scale(1.12); }
+  }
+
+  @keyframes reroll-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(232, 199, 126, 0.4); }
+    70%  { box-shadow: 0 0 0 9px rgba(232, 199, 126, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(232, 199, 126, 0); }
+  }
+
+  @keyframes reroll-rock {
+    0%, 100% { transform: translate(-50%, -50%) rotate(-5deg) scale(1); }
+    50%      { transform: translate(-50%, calc(-50% - 6px)) rotate(4deg) scale(1.04); }
+  }
+
+  @keyframes reroll-spark {
+    0%   { opacity: 0; transform: scale(0) rotate(0deg); }
+    12%  { opacity: 1; transform: scale(1.1) rotate(45deg); }
+    30%  { opacity: 0; transform: scale(0.2) rotate(90deg); }
+    100% { opacity: 0; transform: scale(0) rotate(90deg); }
+  }
+
+  @keyframes reroll-sheen {
+    0%        { transform: translateX(-120%); }
+    55%, 100% { transform: translateX(120%); }
+  }
+
+  @keyframes reroll-pulse-hot {
+    0%   { box-shadow: 0 0 0 0 rgba(232, 199, 126, 0.65), 0 0 24px rgba(232, 199, 126, 0.35); }
+    70%  { box-shadow: 0 0 0 12px rgba(232, 199, 126, 0), 0 0 24px rgba(232, 199, 126, 0.35); }
+    100% { box-shadow: 0 0 0 0 rgba(232, 199, 126, 0), 0 0 24px rgba(232, 199, 126, 0.35); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reroll-card,
+    .reroll-card-shine,
+    .reroll-glow,
+    .reroll-spark,
+    .reroll-cta,
+    .reroll-cta-ready::after {
+      animation: none !important;
+    }
+    .reroll-spark { opacity: 0.9; transform: scale(1) rotate(45deg); }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Like burst
+
+   Fires once, on "Interested". One heart blooms at the centre and ten small
+   ones fly out along their own angle (--like-angle / --like-dist, set
+   inline), then the whole overlay is unmounted by the parent.
+   ───────────────────────────────────────────────────────────────────────── */
+@layer components {
+  .like-burst {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    overflow: hidden;
+    color: var(--color-bloom);
+  }
+
+  .like-ring {
+    position: absolute;
+    width: 140px;
+    height: 140px;
+    border-radius: 9999px;
+    border: 2px solid rgba(232, 199, 126, 0.7);
+    animation: like-ring 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  .like-heart {
+    position: absolute;
+    width: 96px;
+    height: 96px;
+    filter: drop-shadow(0 0 24px rgba(232, 199, 126, 0.75));
+    animation: like-heart 1300ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  .like-petal {
+    position: absolute;
+    width: var(--like-size);
+    height: var(--like-size);
+    opacity: 0;
+    animation: like-petal 1100ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: var(--like-delay);
+    filter: drop-shadow(0 0 6px rgba(232, 199, 126, 0.8));
+  }
+
+  @keyframes like-heart {
+    0%   { opacity: 0; transform: scale(0.2); }
+    18%  { opacity: 1; transform: scale(1.25); }
+    32%  { transform: scale(0.95); }
+    45%  { transform: scale(1.05); }
+    70%  { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.6); filter: blur(6px); }
+  }
+
+  @keyframes like-ring {
+    0%   { opacity: 0.9; transform: scale(0.3); }
+    100% { opacity: 0;   transform: scale(2.4); }
+  }
+
+  @keyframes like-petal {
+    0%   { opacity: 0; transform: rotate(var(--like-angle)) translateY(0) scale(0.3); }
+    15%  { opacity: 1; }
+    100% { opacity: 0; transform: rotate(var(--like-angle)) translateY(calc(var(--like-dist) * -1)) scale(1); }
+  }
+
+  /* The "waiting on them" heart, once the burst has cleared. */
+  .like-waiting-heart {
+    animation: like-waiting 2.2s ease-in-out infinite;
+  }
+  @keyframes like-waiting {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.12); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .like-ring, .like-petal { display: none; }
+    .like-heart { animation: like-heart-still 1200ms linear both; }
+    .like-waiting-heart { animation: none; }
+  }
+  @keyframes like-heart-still {
+    0%, 80% { opacity: 1; transform: none; }
+    100%    { opacity: 0; }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Confetti — the mutual-match hero
+   ───────────────────────────────────────────────────────────────────────── */
+@layer components {
+  .confetti {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .confetti-piece {
+    position: absolute;
+    top: -16px;
+    border-radius: 2px;
+    opacity: 0;
+    animation: confetti-fall 2.8s cubic-bezier(0.25, 0.1, 0.35, 1) both;
+    filter: drop-shadow(0 1px 2px rgba(20, 24, 15, 0.35));
+  }
+  @keyframes confetti-fall {
+    0%   { opacity: 0; transform: translate3d(0, 0, 0) rotate(0deg); }
+    8%   { opacity: 1; }
+    80%  { opacity: 1; }
+    100% { opacity: 0; transform: translate3d(var(--cf-sway), 105vh, 0) rotate(var(--cf-spin)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .confetti { display: none; }
+  }
+}

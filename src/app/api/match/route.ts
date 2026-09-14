@@ -26,14 +26,14 @@ export async function GET() {
       include: {
         userA: {
           select: {
-            id: true, firstName: true, age: true, school: true, photoUrl: true,
+            id: true, firstName: true, age: true, school: true, major: true, photoUrl: true,
             intentions: true, vibe: true, interests: true, idealHangout: true,
             contactMethod: true, contactValue: true,
           },
         },
         userB: {
           select: {
-            id: true, firstName: true, age: true, school: true, photoUrl: true,
+            id: true, firstName: true, age: true, school: true, major: true, photoUrl: true,
             intentions: true, vibe: true, interests: true, idealHangout: true,
             contactMethod: true, contactValue: true,
           },

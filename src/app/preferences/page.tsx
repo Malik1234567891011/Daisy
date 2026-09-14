@@ -1,16 +1,14 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import { Card } from "@/components/ui/Card";
+import DashboardShell from "@/components/dashboard/DashboardShell";
+import {
+  Panel, PanelTitle, Muted, Pill, Field, ChoicePills, ToggleChips, FormStatus,
+} from "@/components/dashboard/primitives";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { Chip } from "@/components/ui/Chip";
-import Button from "@/components/ui/Button";
 import { MAJORS, ETHNICITIES, GENDER_PREFERENCES } from "@/lib/constants";
 import {
   parseEthnicityPreference,
@@ -31,6 +29,8 @@ const MAJOR_PREF_OPTIONS = [
   ...MAJORS.map((m) => ({ value: m, label: m })),
 ];
 
+const ETHNICITY_OPTIONS = ETHNICITIES.map((e) => ({ value: e, label: e }));
+
 type Baseline = {
   genderPref: string;
   schoolPref: SchoolPreference;
@@ -45,6 +45,7 @@ function normalizeSchoolPreference(value: unknown): SchoolPreference {
   return "any";
 }
 
+/** Who you want to meet. Changes take effect on the next Wednesday drop. */
 export default function PreferencesPage() {
   const { status } = useSession();
   const router = useRouter();
@@ -65,14 +66,11 @@ export default function PreferencesPage() {
   const baselineRef = useRef<Baseline | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/login");
-    }
+    if (status === "unauthenticated") router.replace("/login");
   }, [status, router]);
 
   useEffect(() => {
     if (status !== "authenticated") return;
-
     let cancelled = false;
     setLoading(true);
     setFetchError(null);
@@ -82,9 +80,7 @@ export default function PreferencesPage() {
         const res = await fetch("/api/user");
         const body = await res.json().catch(() => null);
         if (!res.ok) {
-          throw new Error(
-            typeof body?.error === "string" ? body.error : "Failed to load preferences"
-          );
+          throw new Error(typeof body?.error === "string" ? body.error : "Failed to load preferences");
         }
         if (cancelled) return;
 
@@ -110,25 +106,17 @@ export default function PreferencesPage() {
           ethPrefs: [...nextEth],
         };
       } catch (e) {
-        if (!cancelled) {
-          setFetchError(e instanceof Error ? e.message : "Something went wrong");
-        }
+        if (!cancelled) setFetchError(e instanceof Error ? e.message : "Something went wrong");
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [status]);
 
-  const toggleEthPref = useCallback((ethnicity: string) => {
-    setEthPrefs((prev) =>
-      prev.includes(ethnicity)
-        ? prev.filter((e) => e !== ethnicity)
-        : [...prev, ethnicity]
-    );
+  const toggleEthPref = useCallback((eth: string) => {
+    setEthPrefs((prev) => (prev.includes(eth) ? prev.filter((e) => e !== eth) : [...prev, eth]));
   }, []);
 
   const validate = useCallback((): boolean => {
@@ -139,9 +127,7 @@ export default function PreferencesPage() {
     else if (min < 18 || min > 30) next.ageMin = "Must be between 18 and 30";
     if (!ageMax || isNaN(max)) next.ageMax = "Enter a maximum age";
     else if (max < 18 || max > 30) next.ageMax = "Must be between 18 and 30";
-    if (!next.ageMin && !next.ageMax && min > max) {
-      next.ageMin = "Min can't be greater than max";
-    }
+    if (!next.ageMin && !next.ageMax && min > max) next.ageMin = "Min can't be greater than max";
     setErrors(next);
     return Object.keys(next).length === 0;
   }, [ageMin, ageMax]);
@@ -165,20 +151,11 @@ export default function PreferencesPage() {
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(
-          typeof body?.error === "string" ? body.error : "Failed to save preferences"
-        );
+        throw new Error(typeof body?.error === "string" ? body.error : "Failed to save preferences");
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-      baselineRef.current = {
-        genderPref,
-        schoolPref,
-        ageMin,
-        ageMax,
-        majorPref,
-        ethPrefs: [...ethPrefs],
-      };
+      baselineRef.current = { genderPref, schoolPref, ageMin, ageMax, majorPref, ethPrefs: [...ethPrefs] };
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -200,224 +177,122 @@ export default function PreferencesPage() {
   }, []);
 
   const formDisabled = loading || saving;
-  const showSessionGate = status === "loading" || status === "unauthenticated";
 
-  if (showSessionGate) {
-    return (
-      <div className="flex min-h-dvh flex-col bg-ivory bg-grain">
-        <Navbar />
-
-        <main className="flex-1">
-          <div className="section-container max-w-2xl py-12 sm:py-16">
-            <p className="text-sm text-text-secondary" role="status">
-              {status === "unauthenticated" ? "Redirecting\u2026" : "Loading\u2026"}
-            </p>
-          </div>
-        </main>
-
-        <Footer />
-      </div>
-    );
-  }
+  if (status === "unauthenticated") return null;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-ivory bg-grain">
-      <Navbar />
+    <DashboardShell title="Your preferences" backHref="/dashboard">
+      <Muted className="-mt-2 text-center">
+        What matters in a match. Changes take effect on your next Wednesday.
+      </Muted>
 
-      <main className="flex-1">
-        <div className="section-container max-w-2xl py-12 sm:py-16">
-          {/* Back link */}
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-charcoal transition-colors mb-6"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            Back to dashboard
-          </Link>
+      {loading && <FormStatus kind="info">Loading preferences…</FormStatus>}
+      {fetchError && !loading && <FormStatus kind="error">{fetchError}</FormStatus>}
+      {saved && <FormStatus kind="success">Preferences saved.</FormStatus>}
+      {saveError && <FormStatus kind="error">{saveError}</FormStatus>}
 
-          {/* Heading */}
-          <h1 className="font-display text-2xl sm:text-3xl text-charcoal">Your preferences</h1>
-          <p className="mt-1 text-text-secondary mb-8">
-            Tell us what matters in a match. Changes take effect on your next match cycle.
-          </p>
+      <Panel className={cn("flex flex-col gap-6", formDisabled && "pointer-events-none opacity-60")}>
+        <PanelTitle className="text-[20px]">Who you want to meet</PanelTitle>
 
-          {/* Success message */}
-          {saved && (
-            <div className="mb-6 rounded-xl bg-success-light border border-success/20 px-4 py-3 text-sm text-success" role="status">
-              Preferences saved successfully.
-            </div>
-          )}
-
-          {fetchError && (
-            <div className="mb-6 rounded-xl bg-error-light border border-error/20 px-4 py-3 text-sm text-error" role="alert">
-              {fetchError}
-            </div>
-          )}
-
-          {saveError && (
-            <div className="mb-6 rounded-xl bg-error-light border border-error/20 px-4 py-3 text-sm text-error" role="alert">
-              {saveError}
-            </div>
-          )}
-
-          {loading && (
-            <div className="mb-6 rounded-xl border border-border bg-white px-4 py-3 text-sm text-text-secondary" role="status">
-              Loading preferences…
-            </div>
-          )}
-
-          <Card className="mb-8">
-            <div className="relative">
-              {loading && (
-                <div
-                  className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/70"
-                  aria-hidden="true"
-                />
-              )}
-              <div
-                className={cn(
-                  "flex flex-col gap-8",
-                  formDisabled && "pointer-events-none opacity-50"
-                )}
-              >
-                {/* Gender preference */}
-                <div>
-                  <p className="mb-1.5 text-sm font-medium text-charcoal">Interested in</p>
-                  <p className="mb-3 text-sm text-text-tertiary">
-                    Who would you like to be matched with?
-                  </p>
-                  <div className="flex rounded-xl border border-border overflow-hidden">
-                    {GENDER_PREFERENCES.map((pref) => (
-                      <button
-                        key={pref}
-                        type="button"
-                        disabled={formDisabled}
-                        onClick={() => setGenderPref(pref)}
-                        className={cn(
-                          "flex-1 py-3 text-sm font-medium transition-colors duration-200",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-inset",
-                          genderPref === pref
-                            ? "bg-sage text-white"
-                            : "bg-white text-text-secondary hover:bg-sage-pale hover:text-charcoal"
-                        )}
-                      >
-                        {pref}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* School preference */}
-                <div>
-                  <p className="mb-1.5 text-sm font-medium text-charcoal">School preference</p>
-                  <p className="mb-3 text-sm text-text-tertiary">
-                    How close should your match be?
-                  </p>
-                  <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="School preference">
-                    {SCHOOL_PREF_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        role="radio"
-                        aria-checked={schoolPref === opt.value}
-                        disabled={formDisabled}
-                        onClick={() => setSchoolPref(opt.value)}
-                        className={cn(
-                          "inline-flex items-center rounded-full px-4 py-2 text-sm font-medium border transition-all duration-200",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage focus-visible:ring-offset-2",
-                          schoolPref === opt.value
-                            ? "bg-sage-pale border-sage text-olive"
-                            : "bg-white border-border text-text-secondary hover:border-sage-light hover:text-charcoal"
-                        )}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Age range */}
-                <div>
-                  <p className="mb-1.5 text-sm font-medium text-charcoal">Age range</p>
-                  <p className="mb-3 text-sm text-text-tertiary">
-                    What age range are you open to?
-                  </p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input
-                      label="Min"
-                      type="number"
-                      min={18}
-                      max={30}
-                      value={ageMin}
-                      onChange={(e) => setAgeMin(e.target.value)}
-                      error={errors.ageMin}
-                      placeholder="18"
-                      disabled={formDisabled}
-                    />
-                    <Input
-                      label="Max"
-                      type="number"
-                      min={18}
-                      max={30}
-                      value={ageMax}
-                      onChange={(e) => setAgeMax(e.target.value)}
-                      error={errors.ageMax}
-                      placeholder="30"
-                      disabled={formDisabled}
-                    />
-                  </div>
-                </div>
-
-                {/* Major preference */}
-                <Select
-                  label="Major preference"
-                  value={majorPref}
-                  onChange={(e) => setMajorPref(e.target.value)}
-                  options={MAJOR_PREF_OPTIONS}
-                  helperText="Leave as 'No preference' to match with any major."
+        <Field label="Interested in">
+          {/* Segmented: one row, one choice, the whole width. */}
+          <div className="flex overflow-hidden rounded-full border border-white/12 bg-white/[0.05] p-1" role="radiogroup" aria-label="Interested in">
+            {GENDER_PREFERENCES.map((pref) => {
+              const on = genderPref === pref;
+              return (
+                <button
+                  key={pref}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
                   disabled={formDisabled}
-                />
-
-                {/* Ethnicity preference */}
-                <div>
-                  <p className="mb-1.5 text-sm font-medium text-charcoal">
-                    Ethnicity preference <span className="font-normal text-text-tertiary">(optional)</span>
-                  </p>
-                  <p className="mb-3 text-sm text-text-tertiary">
-                    Optional — select all that apply, or leave blank to match with everyone.
-                  </p>
-                  <div className="flex flex-wrap gap-2" role="listbox" aria-label="Ethnicity preference" aria-multiselectable="true">
-                    {ETHNICITIES.map((eth) => (
-                      <Chip
-                        key={eth}
-                        selected={ethPrefs.includes(eth)}
-                        onToggle={() => toggleEthPref(eth)}
-                        disabled={formDisabled}
-                      >
-                        {eth}
-                      </Chip>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Actions */}
-          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3">
-            <Button variant="ghost" onClick={handleReset} disabled={formDisabled}>
-              Reset to defaults
-            </Button>
-            <Button variant="primary" onClick={handleSave} disabled={formDisabled}>
-              {saving ? "Saving…" : "Save preferences"}
-            </Button>
+                  onClick={() => setGenderPref(pref)}
+                  className={cn(
+                    "h-10 min-w-0 flex-1 rounded-full px-1 text-[13px] transition-all duration-200",
+                    "focus-visible:outline-2 focus-visible:outline-ivory focus-visible:outline-offset-2",
+                    on
+                      ? "bg-[var(--color-ivory)] font-semibold text-[var(--color-olive)]"
+                      : "font-medium text-white/70 hover:text-ivory",
+                  )}
+                >
+                  {pref}
+                </button>
+              );
+            })}
           </div>
-        </div>
-      </main>
+        </Field>
 
-      <Footer />
-    </div>
+        <Field label="School" hint="How close should your match be?">
+          <ChoicePills
+            label="School preference"
+            options={SCHOOL_PREF_OPTIONS}
+            value={schoolPref}
+            onChange={setSchoolPref}
+            disabled={formDisabled}
+          />
+        </Field>
+
+        <Field label="Age range">
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Min"
+              type="number"
+              inputMode="numeric"
+              min={18}
+              max={30}
+              value={ageMin}
+              onChange={(e) => setAgeMin(e.target.value)}
+              error={errors.ageMin}
+              placeholder="18"
+              disabled={formDisabled}
+            />
+            <Input
+              label="Max"
+              type="number"
+              inputMode="numeric"
+              min={18}
+              max={30}
+              value={ageMax}
+              onChange={(e) => setAgeMax(e.target.value)}
+              error={errors.ageMax}
+              placeholder="30"
+              disabled={formDisabled}
+            />
+          </div>
+        </Field>
+
+        <Select
+          label="Major preference"
+          value={majorPref}
+          onChange={(e) => setMajorPref(e.target.value)}
+          options={MAJOR_PREF_OPTIONS}
+          helperText="Leave as ‘No preference’ to match with any major."
+          disabled={formDisabled}
+        />
+
+        <Field
+          label="Ethnicity preference"
+          optional
+          hint="Select all that apply, or leave blank to match with everyone."
+        >
+          <ToggleChips
+            label="Ethnicity preference"
+            options={ETHNICITY_OPTIONS}
+            selected={ethPrefs}
+            onToggle={toggleEthPref}
+            disabled={formDisabled}
+          />
+        </Field>
+      </Panel>
+
+      <div className="flex flex-col gap-2.5">
+        <Pill onClick={handleSave} disabled={formDisabled} className="w-full">
+          {saving ? "Saving…" : "Save preferences"}
+        </Pill>
+        <Pill tone="glass" onClick={handleReset} disabled={formDisabled} className="w-full">
+          Undo changes
+        </Pill>
+      </div>
+    </DashboardShell>
   );
 }
