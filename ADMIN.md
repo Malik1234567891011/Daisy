@@ -2,6 +2,9 @@
 
 Quick commands for managing the database and users. Run all commands from the `daisy/` directory.
 
+> For day-to-day looking around, use the in-app dashboard at `/admin`
+> (sign in with `ADMIN_API_KEY`). Everything below is for the terminal.
+
 ---
 
 ## Query all users
@@ -98,11 +101,11 @@ Opens at http://localhost:5555
 
 ## Admin dashboard
 
-```bash
-node scripts/dashboard.js
-```
-
-Serves stats, charts, and user/match tables at http://localhost:3456.
+Built into the app at `/admin` — locally that is http://localhost:3000/admin,
+in production https://www.daisyweekly.com/admin. Sign in with `ADMIN_API_KEY`
+(the same key the `x-admin-key` ops endpoints take). Shows signups, the
+verification funnel, breakdowns, referrers, suspect emails, and a profile
+viewer with delete.
 
 ## Environment
 

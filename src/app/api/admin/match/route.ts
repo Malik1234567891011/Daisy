@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-
-const ADMIN_KEY = process.env.ADMIN_API_KEY;
-
-function isAdmin(req: NextRequest): boolean {
-  const key = req.headers.get("x-admin-key");
-  return !!ADMIN_KEY && key === ADMIN_KEY;
-}
+import { isAdminRequest } from "@/lib/admin-auth";
 
 // POST: Create a manual match between two users
 export async function POST(req: NextRequest) {
-  if (!isAdmin(req)) {
+  if (!(await isAdminRequest(req))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -80,7 +74,7 @@ export async function POST(req: NextRequest) {
 
 // GET: List all users for manual matching
 export async function GET(req: NextRequest) {
-  if (!isAdmin(req)) {
+  if (!(await isAdminRequest(req))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
