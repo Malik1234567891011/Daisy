@@ -1,4 +1,4 @@
-import { parseIdealHangouts } from "@/lib/idealHangouts";
+import { parseIdealHangouts } from "./idealHangouts.ts";
 import { parseEthnicityPreference } from "./ethnicityPreference.ts";
 
 /**

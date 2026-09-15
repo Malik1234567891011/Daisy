@@ -22,7 +22,14 @@ describe("reroll pricing", () => {
     const checkout = read("src/app/api/reroll/checkout/route.ts");
     assert.match(checkout, /unit_amount:\s*REROLL_PRICE_CENTS/);
     assert.match(checkout, /currency:\s*REROLL_CURRENCY/);
-    assert.match(read("src/app/dashboard/page.tsx"), /formatRerollPrice\(\)/);
+    // The reroll UI has moved components before; assert the helper is used
+    // somewhere in the signed-in app rather than pinning one file path.
+    const ui = [
+      "src/app/dashboard/page.tsx",
+      "src/components/dashboard/RerollTeaser.tsx",
+    ].filter((f) => { try { read(f); return true; } catch { return false; } })
+     .map(read).join("\n");
+    assert.match(ui, /formatRerollPrice(WithCurrency)?\(\)/);
   });
 
   test("the public FAQ states the price, the currency, and that it does not renew", () => {

@@ -1,4 +1,4 @@
-import { IDEAL_HANGOUTS } from "@/lib/constants";
+import { IDEAL_HANGOUTS } from "./constants.ts";
 
 /**
  * Ideal hangout is a multi-select stored in one `idealHangout` column as a
