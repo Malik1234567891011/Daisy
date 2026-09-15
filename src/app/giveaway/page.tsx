@@ -117,7 +117,7 @@ const RULES: { title: string; body: React.ReactNode }[] = [
     title: "Questions",
     body: (
       <p>
-        Ask us at <EmailLink address="malik.shourbaji@gmail.com" />. This promotion is run by
+        Ask us at <EmailLink address="hi@cielpm.ai" />. This promotion is run by
         Daisy Weekly and is not sponsored or administered by Instagram, Facebook, or any other
         platform.
       </p>
