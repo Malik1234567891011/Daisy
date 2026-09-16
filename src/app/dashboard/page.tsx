@@ -101,6 +101,93 @@ function RaffleCard({
   );
 }
 
+/**
+ * A second live match, from someone rerolling into you.
+ *
+ * Deliberately a compact card rather than a second full hero: the primary
+ * match already owns the top of the page, and two competing heroes reads as a
+ * feed. It still has to be answerable in place — a match you can see but not
+ * reply to is worse than one you never saw.
+ */
+function SecondMatchCard({
+  match,
+  onDecide,
+  deciding,
+}: {
+  match: OtherMatch;
+  onDecide: (matchId: string, decision: "INTERESTED" | "DECLINED") => Promise<boolean>;
+  deciding: boolean;
+}) {
+  const p = match.partner;
+  const answered = match.myDecision !== "PENDING";
+  const contact = match.isMutual ? p.contactValue : null;
+
+  return (
+    <div className="max-w-sm mx-auto mt-8 rounded-2xl border border-butter-light/50 bg-butter-pale/25 px-5 py-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Sparkles className="w-4 h-4 text-espresso shrink-0" strokeWidth={1.8} />
+        <p className="text-xs font-medium text-espresso uppercase tracking-widest">
+          {match.isMutual ? "It's a match" : "Someone rerolled — you got another match"}
+        </p>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-sage-pale/50">
+          {p.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={p.photoUrl} alt={p.firstName ?? "Match"} className="h-full w-full object-cover" />
+          ) : null}
+        </span>
+        <div className="min-w-0">
+          <p className="font-display text-lg text-charcoal truncate">
+            {p.firstName}
+            {p.age ? `, ${p.age}` : ""}
+          </p>
+          <p className="text-xs text-text-secondary truncate">{p.school}</p>
+          {p.interests?.length ? (
+            <p className="text-xs text-text-tertiary truncate mt-0.5">
+              {p.interests.slice(0, 3).join(" · ")}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      {match.isMutual && contact ? (
+        <p className="mt-3 text-sm text-charcoal">
+          You both said yes —{" "}
+          <span className="font-medium">{contact}</span>
+        </p>
+      ) : answered ? (
+        <p className="mt-3 text-xs text-text-secondary">
+          {match.myDecision === "INTERESTED"
+            ? "You said you\u2019re interested. Waiting to see if they feel the same\u2026"
+            : "You passed on this one."}
+        </p>
+      ) : (
+        <div className="mt-4 flex flex-col gap-2.5 min-[400px]:flex-row-reverse">
+          <Pill
+            onClick={() => onDecide(match.matchId, "INTERESTED")}
+            disabled={deciding}
+            className="min-w-0 min-[400px]:flex-1 px-3"
+          >
+            <Heart className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
+            Interested
+          </Pill>
+          <Pill
+            tone="glass"
+            onClick={() => onDecide(match.matchId, "DECLINED")}
+            disabled={deciding}
+            className="min-w-0 min-[400px]:flex-1 px-3"
+          >
+            <X className="h-4 w-4" strokeWidth={2} aria-hidden="true" />
+            Pass
+          </Pill>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Types ─── */
 type UserData = {
   id: string;
@@ -150,6 +237,20 @@ type MatchData = {
   partner?: MatchPartner;
   suggestedSpot?: MeetingSpot | null;
   closedMatch?: { youDeclined: boolean; reason?: ClosedReason };
+  /** Further live matches — someone rerolled into you. */
+  otherMatches?: OtherMatch[];
+};
+
+/** A second live match, shown alongside the main one. */
+type OtherMatch = {
+  matchId: string;
+  status: string;
+  myDecision: string;
+  theirDecision: string;
+  isMutual: boolean;
+  dropDate: string;
+  partner: MatchPartner;
+  suggestedSpot?: MeetingSpot | null;
 };
 
 type ClosedReason = "you-declined" | "they-declined" | "rerolled";
@@ -1036,6 +1137,30 @@ export default function DashboardPage() {
     return () => { cancelled = true; };
   }, [status, router]);
 
+  /** Answer any live match by id — the primary one or a second one. */
+  const decideOn = useCallback(
+    async (matchId: string, decision: "INTERESTED" | "DECLINED"): Promise<boolean> => {
+      setDeciding(true);
+      try {
+        const res = await fetch("/api/match/decision", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ matchId, decision }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        const refreshed = await fetch("/api/match").then((r) => r.json());
+        setMatch(refreshed);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        setDeciding(false);
+      }
+    },
+    [],
+  );
+
   const handleDecision = useCallback(
     async (decision: "INTERESTED" | "DECLINED"): Promise<boolean> => {
       if (!match?.matchId) return false;
@@ -1180,6 +1305,18 @@ export default function DashboardPage() {
           ) : (
             <StatusPanel />
           )}
+
+          {/* Extra live matches, from someone rerolling into you. Rendered
+              whatever the primary match is doing, so a second match is never
+              hidden behind the state of the first. */}
+          {(match?.otherMatches ?? []).map((m) => (
+            <SecondMatchCard
+              key={m.matchId}
+              match={m}
+              onDecide={decideOn}
+              deciding={deciding}
+            />
+          ))}
 
           {/* And the rest of the dashboard is always underneath. */}
           <EverydaySections

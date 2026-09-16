@@ -31,12 +31,14 @@ export function getSupportEmail(): string {
   return process.env.BROADCAST_SUPPORT_EMAIL || "hello@joindaisy.com";
 }
 
-export function newMatchBody(): string {
-  return (
-    "Daisy 🌼 you have a new match.\n" +
-    "Open your dashboard to see them.\n\n" +
-    `👉 ${getSiteBase()}/dashboard`
-  );
+export function newMatchBody(alongsideExisting = false): string {
+  // Someone who already has a match needs to be told this is a second one,
+  // or they open the dashboard, see the match they already knew about, and
+  // assume the text was a duplicate.
+  const lead = alongsideExisting
+    ? "Daisy 🌼 someone rerolled and you got a second match."
+    : "Daisy 🌼 someone rerolled and you got a match.";
+  return lead + "\nOpen your dashboard to see them.\n\n" + `👉 ${getSiteBase()}/dashboard`;
 }
 
 export function mutualBody(partnerName: string | null): string {
@@ -73,8 +75,8 @@ export async function sendSmsToUser(userId: string, body: string): Promise<boole
   }
 }
 
-export function notifyNewMatch(userId: string): Promise<boolean> {
-  return sendSmsToUser(userId, newMatchBody());
+export function notifyNewMatch(userId: string, alongsideExisting = false): Promise<boolean> {
+  return sendSmsToUser(userId, newMatchBody(alongsideExisting));
 }
 
 export function notifyMutual(userId: string, partnerName: string | null): Promise<boolean> {

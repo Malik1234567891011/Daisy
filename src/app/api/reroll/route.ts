@@ -164,8 +164,15 @@ export async function POST(req: Request) {
       });
 
       // After commit: text the person who just got a match, since nobody
-      // refreshes a dashboard on a Thursday.
-      await notifyNewMatch(candidateId);
+      // refreshes a dashboard on a Thursday. More than one live match means
+      // this is a second one, and the text has to say so.
+      const liveForCandidate = await prisma.match.count({
+        where: {
+          status: { in: ["PENDING", "MUTUAL"] },
+          OR: [{ userAId: candidateId }, { userBId: candidateId }],
+        },
+      });
+      await notifyNewMatch(candidateId, liveForCandidate > 1);
 
       return NextResponse.json({ matchId: result.matchId });
     } catch (error) {
