@@ -98,12 +98,17 @@ function buildBody() {
       .replace(/\{\{URL\}\}/g, BASE)
       .replace(/\{\{EMAIL\}\}/g, SUPPORT);
   }
+  /*
+   * GSM-7 only. One emoji, curly apostrophe or em dash switches the whole
+   * message to UCS-2, where a segment is 67 characters instead of 153 — the
+   * old body billed 4 segments per person for 220 characters. Keep this to
+   * plain ASCII and a straight apostrophe, and check the printed segment
+   * count after any edit.
+   */
   return (
-    "Daisy 🌼 your match is ready.\n\n" +
-    "Every Wednesday we match you with 1 student in Montreal.\n" +
-    "Open your dashboard to see them.\n\n" +
-    "If you both say yes, you'll unlock each other's contact.\n\n" +
-    "👉 " + dash
+    "Daisy: your match is ready.\n\n" +
+    "Open your dashboard to see them. If you both say yes, you unlock contact details.\n\n" +
+    dash
   );
 }
 
@@ -292,6 +297,17 @@ function buildBody() {
   );
   console.log("Created by slot:", createdBySlot);
   console.log("SMS recipients due now (verified + phone + consent): " + recipients.length);
+
+  // Print the encoding and segment count before anything goes out: a single
+  // emoji or curly apostrophe quadruples the bill, and the only way that gets
+  // noticed is if the number is on screen.
+  var _uni = false;
+  for (var _i = 0; _i < body.length; _i++) if (body.charCodeAt(_i) > 127) _uni = true;
+  var _seg = _uni ? 67 : 153;
+  var _per = Math.ceil(body.length / _seg);
+  console.log("\n--- message (" + body.length + " chars, " + (_uni ? "UNICODE" : "GSM-7") +
+    ", " + _per + " segment(s) each, " + (_per * recipients.length) + " total) ---\n");
+  console.log(body + "\n");
 
   let ok = 0, fail = 0;
   for (let i = 0; i < recipients.length; i++) {

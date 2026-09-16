@@ -36,17 +36,17 @@ export function newMatchBody(alongsideExisting = false): string {
   // or they open the dashboard, see the match they already knew about, and
   // assume the text was a duplicate.
   const lead = alongsideExisting
-    ? "Daisy 🌼 someone rerolled and you got a second match."
-    : "Daisy 🌼 someone rerolled and you got a match.";
-  return lead + "\nOpen your dashboard to see them.\n\n" + `👉 ${getSiteBase()}/dashboard`;
+    ? "Daisy: someone rerolled and you got a second match."
+    : "Daisy: someone rerolled and you got a match.";
+  return lead + "\nOpen your dashboard to see them.\n\n" + `${getSiteBase()}/dashboard`;
 }
 
 export function mutualBody(partnerName: string | null): string {
   const who = partnerName?.trim() || "your match";
   return (
-    `Daisy 🌼 it's mutual with ${who}!\n` +
+    `Daisy: it's mutual with ${who}!\n` +
     "Their contact info is on your dashboard.\n\n" +
-    `👉 ${getSiteBase()}/dashboard`
+    `${getSiteBase()}/dashboard`
   );
 }
 
