@@ -53,6 +53,19 @@ export async function findRerollCandidate(userId: string): Promise<string | null
     excluded.add(m.userAId === userId ? m.userBId : m.userAId);
   }
 
+  // Who is already in a live match. Not an exclusion any more — a reroll can
+  // give someone a second match — but a strong preference: sending the reroll
+  // to someone with nobody is better for them, and avoids handing a second
+  // match to a person whose dashboard shows one at a time.
+  const busy = new Set<string>();
+  for (const m of await prisma.match.findMany({
+    where: { status: { in: ["PENDING", "MUTUAL"] } },
+    select: { userAId: true, userBId: true },
+  })) {
+    busy.add(m.userAId);
+    busy.add(m.userBId);
+  }
+
   const candidates = await prisma.user.findMany({
     where: {
       id: { notIn: [...excluded] },
@@ -67,10 +80,15 @@ export async function findRerollCandidate(userId: string): Promise<string | null
     select: CANDIDATE_SELECT,
   });
 
+  // Unmatched people win any tie against a matched one, whatever the affinity
+  // difference — the bonus is larger than the maximum affinity score.
+  const UNMATCHED_BONUS = 1000;
+
   let best: { id: string; score: number } | null = null;
   for (const candidate of candidates) {
     if (!isMutuallyCompatible(seeker, candidate)) continue;
-    const score = affinityScore(seeker, candidate);
+    const score =
+      affinityScore(seeker, candidate) + (busy.has(candidate.id) ? 0 : UNMATCHED_BONUS);
     if (!best || score > best.score) best = { id: candidate.id, score };
   }
 
