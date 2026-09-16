@@ -106,10 +106,21 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * The drop moment a manually created match is stamped with.
+ *
+ * No `|| 7` on the offset: on a Wednesday it is legitimately 0, and 0 being
+ * falsy used to push the whole of drop day a week out — a match created this
+ * afternoon would have been dated next Wednesday and stayed invisible until
+ * then, since /api/match only returns rows whose dropDate has passed.
+ *
+ * Deliberately no roll-forward either. A match an admin creates after 6pm on
+ * drop day should go live now, not next week.
+ */
 function getNextWednesday(): Date {
   const now = new Date();
   const wed = new Date(now);
-  wed.setDate(now.getDate() + ((3 - now.getDay() + 7) % 7 || 7));
+  wed.setDate(now.getDate() + ((3 - now.getDay() + 7) % 7));
   wed.setHours(18, 0, 0, 0);
   return wed;
 }

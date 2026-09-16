@@ -170,7 +170,11 @@ function getNextDropDate(): Date {
   const now = new Date();
   if (now < FIRST_DROP) return FIRST_DROP;
   const wed = new Date(now);
-  wed.setDate(now.getDate() + ((3 - now.getDay() + 7) % 7 || 7));
+  // No `|| 7` here: on a Wednesday the offset is legitimately 0, and 0 is
+  // falsy, so that guard used to skip the whole of drop day and count down
+  // to the following week. The check below already rolls forward once 6pm
+  // has actually passed.
+  wed.setDate(now.getDate() + ((3 - now.getDay() + 7) % 7));
   wed.setHours(18, 0, 0, 0);
   if (wed <= now) wed.setDate(wed.getDate() + 7);
   return wed;
