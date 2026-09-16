@@ -40,22 +40,15 @@ export async function findRerollCandidate(userId: string): Promise<string | null
   });
   if (!seeker) return null;
 
-  const [liveMatches, history] = await Promise.all([
-    prisma.match.findMany({
-      where: { status: { in: ["PENDING", "MUTUAL"] } },
-      select: { userAId: true, userBId: true },
-    }),
-    prisma.match.findMany({
-      where: { OR: [{ userAId: userId }, { userBId: userId }] },
-      select: { userAId: true, userBId: true },
-    }),
-  ]);
+  const history = await prisma.match.findMany({
+    where: { OR: [{ userAId: userId }, { userBId: userId }] },
+    select: { userAId: true, userBId: true },
+  });
 
+  // Being in a live match no longer rules someone out: a reroll can give them
+  // a second match. Only the rerolling user's own history is excluded, so a
+  // reroll never hands back a familiar face.
   const excluded = new Set<string>([userId]);
-  for (const m of liveMatches) {
-    excluded.add(m.userAId);
-    excluded.add(m.userBId);
-  }
   for (const m of history) {
     excluded.add(m.userAId === userId ? m.userBId : m.userAId);
   }
@@ -65,6 +58,8 @@ export async function findRerollCandidate(userId: string): Promise<string | null
       id: { notIn: [...excluded] },
       onboardingComplete: true,
       phoneVerified: true,
+      // No photo means no match, the same rule the weekly drop applies.
+      photoUrl: { not: null },
       // Enforced again in isMutuallyCompatible; kept here so the two
       // populations never even load into the same list.
       isTestAccount: seeker.isTestAccount,
@@ -88,8 +83,11 @@ export type RerollTarget =
   | {
       ok: true;
       matchId: string;
-      /** The closed match being replaced. It is left as it is. */
-      status: "DECLINED" | "REROLLED";
+      /**
+       * The match being replaced. PENDING means it is still live and the
+       * reroll will decline it on the user's behalf — the client warns first.
+       */
+      status: "PENDING" | "DECLINED" | "REROLLED";
       partnerId: string;
     }
   | { ok: false; reason: "no-match" | "mutual" | "pending" };
@@ -120,7 +118,12 @@ export async function getRerollTarget(userId: string): Promise<RerollTarget> {
 
   const partnerId = match.userAId === userId ? match.userBId : match.userAId;
 
-  if (match.status === "PENDING") return { ok: false, reason: "pending" };
+  // A live match is rerollable. The client warns that continuing declines it,
+  // and the spend marks it REROLLED. Refusing the reroll and sending them back
+  // to a person they have already decided against helps nobody.
+  if (match.status === "PENDING") {
+    return { ok: true, matchId: match.id, status: match.status, partnerId };
+  }
 
   const recent = match.dropDate.getTime() >= now.getTime() - CLOSED_MATCH_WINDOW_MS;
   if (recent && (match.status === "DECLINED" || match.status === "REROLLED")) {
@@ -168,9 +171,6 @@ export async function openMatch(
   seekerId: string,
   candidateId: string,
 ): Promise<{ id: string }> {
-  if (await hasLiveMatch(tx, candidateId)) {
-    throw new CandidateTakenError("candidate was matched");
-  }
   return tx.match.create({
     data: { userAId: seekerId, userBId: candidateId, dropDate: new Date() },
     select: { id: true },

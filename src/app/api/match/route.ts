@@ -16,13 +16,16 @@ export async function GET() {
     const userId = session.user.id;
     const now = new Date();
 
-    const match = await prisma.match.findFirst({
+    // findMany, not findFirst: a reroll can give someone a second live match,
+    // and returning only the newest would have quietly hidden the one they
+    // were already deciding on.
+    const activeMatches = await prisma.match.findMany({
       where: {
         OR: [{ userAId: userId }, { userBId: userId }],
         status: { in: ["PENDING", "MUTUAL"] },
         dropDate: { lte: now },
       },
-      orderBy: { dropDate: "desc" },
+      orderBy: { dropDate: "asc" },
       include: {
         userA: {
           select: {
@@ -41,6 +44,8 @@ export async function GET() {
         suggestedSpot: true,
       },
     });
+
+    const match = activeMatches[0] ?? null;
 
     if (!match) {
       // Only this week's closed match counts. The seed script never expires
@@ -82,22 +87,30 @@ export async function GET() {
       return NextResponse.json({ hasMatch: false });
     }
 
-    const isUserA = match.userAId === userId;
-    const partner = isUserA ? match.userB : match.userA;
-    const myDecision = isUserA ? match.userADecision : match.userBDecision;
-    const theirDecision = isUserA ? match.userBDecision : match.userADecision;
-    const isMutual = match.status === "MUTUAL";
+    const shape = (m: (typeof activeMatches)[number]) => {
+      const mine = m.userAId === userId;
+      const other = mine ? m.userB : m.userA;
+      const mutual = m.status === "MUTUAL";
+      return {
+        matchId: m.id,
+        status: m.status,
+        myDecision: mine ? m.userADecision : m.userBDecision,
+        theirDecision: mine ? m.userBDecision : m.userADecision,
+        isMutual: mutual,
+        dropDate: m.dropDate,
+        partner: partnerPayload(other, mutual),
+        suggestedSpot: mutual ? m.suggestedSpot : null,
+      };
+    };
+
+    const primary = shape(match);
+    const others = activeMatches.filter((m) => m.id !== match.id).map(shape);
 
     return NextResponse.json({
       hasMatch: true,
-      matchId: match.id,
-      status: match.status,
-      myDecision,
-      theirDecision,
-      isMutual,
-      dropDate: match.dropDate,
-      partner: partnerPayload(partner, isMutual),
-      suggestedSpot: isMutual ? match.suggestedSpot : null,
+      ...primary,
+      /** Further live matches, e.g. after someone rerolled into you. */
+      otherMatches: others,
     });
   } catch (err) {
     console.error("Match fetch error:", err);

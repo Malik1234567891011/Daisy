@@ -64,8 +64,22 @@ var VALID_DOMAINS = [
 /** Marketing / org accounts: exclude the profile that owns this code */
 var MARKETING_REFERRAL_CODES = ["Gc1D1NUw"];
 
-/** Do not match these first names (trimmed, case-insensitive) */
-var EXCLUDE_FIRST_NAMES = ["dawson", "kamil", "vincent", "malik"];
+/**
+ * Team accounts that should never be matched, keyed on email rather than
+ * first name. The old first-name list caught anyone who happened to share a
+ * name with the team — a real Kamil at Concordia was being dropped from every
+ * drop without anyone noticing.
+ */
+var EXCLUDE_EMAILS = [
+  "malik@johnabbottcollege.net",     // Malik — founder
+  "o_krimly@live.concordia.ca",      // Omar — founder
+  "6255782@edu.vaniercollege.qc.ca", // Sky — team
+];
+
+/** Promo/marketing profiles, also by email. */
+var EXCLUDE_PROMO_EMAILS = [
+  "thedawsonhuzz@dawsoncollege.qc.ca", // Dawson promo profile
+];
 
 /** Specific emails to force-include even if domain looks suspect */
 var WHITELISTED_EMAILS = [
@@ -127,8 +141,8 @@ function isExcludedFromMatching(u) {
   var em = String(u.email || "").toLowerCase();
   if (em.indexOf("confessions") !== -1) return "org / confessions-style account";
   if (em.indexOf("@office.") !== -1) return "org / office email";
-  var fn = normName(u.firstName);
-  if (EXCLUDE_FIRST_NAMES.indexOf(fn) !== -1) return "excluded name (" + fn + ")";
+  if (EXCLUDE_EMAILS.indexOf(em) !== -1) return "team account";
+  if (EXCLUDE_PROMO_EMAILS.indexOf(em) !== -1) return "promo account";
   if (u.referralCode && MARKETING_REFERRAL_CODES.indexOf(u.referralCode) !== -1)
     return "marketing referral account (owns code)";
   return "";
@@ -471,12 +485,20 @@ prisma.user
       eligible.push(usr);
     }
 
+    /* No photo means no match. These members used to be paired with each
+       other in a separate bucket, which produced matches nobody could judge
+       and a pool too small to be worth it. They are excluded outright and
+       listed at the end of the file so they can be nudged. */
     var withPhoto = eligible.filter(function (u) {
       return !!u.photoUrl;
     });
-    var noPhoto = eligible.filter(function (u) {
+    var noPhoto = [];
+    var photoless = eligible.filter(function (u) {
       return !u.photoUrl;
     });
+    for (var pl = 0; pl < photoless.length; pl++) {
+      excluded.push({ u: photoless[pl], why: "no photo" });
+    }
 
     var used = {};
     var pairs = [];
@@ -573,6 +595,37 @@ prisma.user
     }
 
     /* Priority: ensure Yehia gets a match */
+    /* Pinned by email: guaranteed a match ahead of the greedy pass. Used for
+       people we have specifically promised one to, on the surplus side of the
+       pool where the greedy pass would otherwise leave them out. */
+    var PIN_EMAILS = ["ka_khala@live.concordia.ca"];
+    for (var pe = 0; pe < PIN_EMAILS.length; pe++) {
+      var pinUser = null;
+      for (var pu = 0; pu < eligible.length; pu++) {
+        if (String(eligible[pu].email || "").toLowerCase() === PIN_EMAILS[pe]) { pinUser = eligible[pu]; break; }
+      }
+      if (!pinUser || used[pinUser.id]) continue;
+      var pinPool = pinUser.photoUrl ? withPhoto : noPhoto;
+      var pinBest = null;
+      for (var pi = 0; pi < pinPool.length; pi++) {
+        var pc = pinPool[pi];
+        if (pc.id === pinUser.id || used[pc.id]) continue;
+        if (_previouslyMatched[pinUser.id + ":" + pc.id]) continue;
+        if (!pairEligible(pinUser, pc)) continue;
+        var pS = softScore(pinUser, pc) + softScore(pc, pinUser);
+        var pO = overlap(pinUser.interests || [], pc.interests || []);
+        if (!pinBest || pS > pinBest.score || (pS === pinBest.score && pO > pinBest.interestOverlap)) {
+          pinBest = { a: pinUser, b: pc, score: pS, interestOverlap: pO, pinNote: "pinned" };
+        }
+      }
+      if (pinBest) {
+        used[pinBest.a.id] = true;
+        used[pinBest.b.id] = true;
+        pairs.push(pinBest);
+        notes.push("Pinned **" + (pinBest.a.firstName || "?") + "** with **" + (pinBest.b.firstName || "?") + "** (best score in bucket).");
+      }
+    }
+
     var yehia = findYehia(eligible);
     if (yehia && !used[yehia.id]) {
       var yehiaPool = yehia.photoUrl ? withPhoto : noPhoto;
@@ -788,7 +841,7 @@ prisma.user
     lines.push("## Special rules for this run");
     lines.push("");
     lines.push(
-      "- **Excluded from matching:** non-school / suspect emails (except whitelisted); emails with **confessions** or **`@office.`**; first names **Dawson**, **Kamil**, **Vincent**, **Malik**; accounts that **own** marketing referral code `Gc1D1NUw` (Dawson promo profile).",
+      "- **Excluded from matching:** non-school / suspect emails (except whitelisted); emails with **confessions** or **`@office.`**; **no photo**; team accounts (Malik, Omar, Sky) and the Dawson promo profile, keyed on email.",
     );
     lines.push(
       "- **Photo buckets:** users **with photo** only match others **with photo**; users **without photo** only match others **without photo** (no cross-bucket pairs).",

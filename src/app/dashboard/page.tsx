@@ -1065,6 +1065,16 @@ export default function DashboardPage() {
   );
 
   const handleReroll = useCallback(async () => {
+    // A reroll now replaces a live match, so say so before taking the money.
+    // Someone who came to look rather than to decide gets to back out here.
+    if (match?.hasMatch && !match.isMutual) {
+      const partner = match.partner?.firstName ?? "your current match";
+      const ok = window.confirm(
+        `Choosing a reroll declines ${partner}. You'll be matched with someone new straight away, and you won't see ${partner} again.\n\nContinue?`,
+      );
+      if (!ok) return;
+    }
+
     setRerollError(null);
     setRerolling(true);
     let navigatingToStripe = false;
@@ -1116,7 +1126,7 @@ export default function DashboardPage() {
     } finally {
       if (!navigatingToStripe) setRerolling(false);
     }
-  }, [user]);
+  }, [user, match]);
 
   const isLoading = status === "loading" || loading;
 

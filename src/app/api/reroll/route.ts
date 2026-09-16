@@ -7,7 +7,6 @@ import {
   CandidateTakenError,
   findRerollCandidate,
   getRerollTarget,
-  hasLiveMatch,
   lockUsers,
   openMatch,
 } from "@/lib/matching";
@@ -95,9 +94,7 @@ export async function POST(req: Request) {
         error:
           target.reason === "mutual"
             ? "You already matched with this person — nothing to reroll."
-            : target.reason === "pending"
-              ? "Answer your current match first. Rerolls open up once a match closes."
-              : "You don't have a match to reroll right now.",
+            : "You don't have a match to reroll right now.",
       },
       { status: 400 },
     );
@@ -135,11 +132,18 @@ export async function POST(req: Request) {
           throw new AlreadySpentError("credit already spent");
         }
 
-        // Rerolling out of a closed match, but something (a free rematch, an
-        // admin, the Wednesday drop) already gave this user a live one in
-        // the meantime. That one has to be answered first.
-        if (await hasLiveMatch(tx, userId)) {
-          throw new AlreadySpentError("already matched");
+        // Choosing a reroll declines the match being replaced — the client
+        // says so before charging. Only the rerolling side is recorded as
+        // having passed; the partner keeps their own answer.
+        if (target.status === "PENDING") {
+          const closed = await tx.match.updateMany({
+            where: { id: target.matchId, status: "PENDING" },
+            data: { status: "REROLLED", rerolledByUserId: userId },
+          });
+          if (closed.count !== 1) {
+            // Someone answered it between the check and here.
+            throw new AlreadySpentError("match already resolved");
+          }
         }
 
         const created = await openMatch(tx, userId, candidateId);
