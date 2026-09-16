@@ -139,10 +139,10 @@ export default function TermsPage() {
                   applicable law. For billing questions or to request a refund,
                   email{" "}
                   <a
-                    href="mailto:malik.shourbaji@gmail.com"
+                    href="mailto:hi@cielpm.ai"
                     className="font-medium text-sage underline-offset-4 hover:underline"
                   >
-                    malik.shourbaji@gmail.com
+                    hi@cielpm.ai
                   </a>
                   .
                 </p>
@@ -187,10 +187,10 @@ export default function TermsPage() {
                 <p>
                   For questions about these terms, reach us at{" "}
                   <a
-                    href="mailto:malik.shourbaji@gmail.com"
+                    href="mailto:hi@cielpm.ai"
                     className="font-medium text-sage underline-offset-4 hover:underline"
                   >
-                    malik.shourbaji@gmail.com
+                    hi@cielpm.ai
                   </a>
                   .
                 </p>

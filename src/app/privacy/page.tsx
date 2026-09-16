@@ -150,10 +150,10 @@ export default function PrivacyPage() {
                 <p>
                   Questions about this policy or your data? Email us at{" "}
                   <a
-                    href="mailto:malik.shourbaji@gmail.com"
+                    href="mailto:hi@cielpm.ai"
                     className="font-medium text-sage underline-offset-4 hover:underline"
                   >
-                    malik.shourbaji@gmail.com
+                    hi@cielpm.ai
                   </a>
                   . We’re happy to help.
                 </p>

@@ -233,7 +233,7 @@ export const FOOTER = {
     ],
     connect: [
       { label: "Instagram", href: "https://instagram.com/daisyweeklymtl" },
-      { label: "Email us", href: "mailto:malik.shourbaji@gmail.com" },
+      { label: "Email us", href: "mailto:hi@cielpm.ai" },
     ],
   },
 };
