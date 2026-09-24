@@ -46,6 +46,7 @@ var VALID_DOMAINS = [
   "umontreal.ca",
   "hec.ca",
   "polymtl.ca",
+  "etsmtl.ca",
   "uqam.ca",
   "courrier.uqam.ca",
   "cmontmorency.qc.ca",
