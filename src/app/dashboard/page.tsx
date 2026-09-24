@@ -15,6 +15,7 @@ import DashboardShell from "@/components/dashboard/DashboardShell";
 import RerollTeaser from "@/components/dashboard/RerollTeaser";
 import LikeBurst from "@/components/dashboard/LikeBurst";
 import Confetti from "@/components/dashboard/Confetti";
+import GiveawayReveal from "@/components/dashboard/GiveawayReveal";
 import {
   Panel, PANEL_INSET, Eyebrow, PanelTitle, Muted, TextLink, Pill, IconTile,
   ActionRow, Notice, Tag, Countdown,
@@ -1283,6 +1284,7 @@ export default function DashboardPage() {
 
   return (
     <DashboardShell title={title}>
+      <GiveawayReveal firstName={user?.firstName} />
       {isLoading ? (
         <LoadingDashboard />
       ) : (

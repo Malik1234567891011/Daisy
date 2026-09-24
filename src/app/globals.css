@@ -927,3 +927,48 @@
     .confetti { display: none; }
   }
 }
+
+/* Giveaway reveal overlay (GiveawayReveal.tsx). The heart is two clipped
+   copies of one shape so it can split down a jagged seam at noon. */
+@layer components {
+  .reveal-shake { animation: reveal-shake 0.6s ease-in-out infinite; }
+  .reveal-shake-hard { animation: reveal-shake-hard 0.18s linear infinite; }
+  @keyframes reveal-shake {
+    0%, 100% { transform: rotate(0) scale(1); }
+    25% { transform: rotate(-4deg) scale(1.03); }
+    50% { transform: rotate(0) scale(1.06); }
+    75% { transform: rotate(4deg) scale(1.03); }
+  }
+  @keyframes reveal-shake-hard {
+    0% { transform: translate(0, 0) rotate(0); }
+    25% { transform: translate(-4px, 2px) rotate(-6deg); }
+    50% { transform: translate(3px, -3px) rotate(5deg) scale(1.08); }
+    75% { transform: translate(-2px, 3px) rotate(-3deg); }
+  }
+
+  .reveal-pulse { animation: reveal-pulse 1s ease-in-out infinite; }
+  @keyframes reveal-pulse { 50% { transform: scale(1.08); } }
+
+  .reveal-half { transition: transform 1s cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity 1s; }
+  .reveal-half-left { clip-path: polygon(0 0, 52% 0, 46% 30%, 54% 50%, 46% 70%, 50% 100%, 0 100%); }
+  .reveal-half-right { clip-path: polygon(52% 0, 100% 0, 100% 100%, 50% 100%, 46% 70%, 54% 50%, 46% 30%); }
+  .reveal-open .reveal-half-left { transform: translateX(-25vw) rotate(-25deg); opacity: 0; }
+  .reveal-open .reveal-half-right { transform: translateX(25vw) rotate(25deg); opacity: 0; }
+
+  .reveal-glow {
+    background: radial-gradient(circle, rgba(232, 199, 126, 0.5), transparent 65%);
+    opacity: 0;
+    transition: opacity 0.6s;
+  }
+  .reveal-open .reveal-glow { opacity: 1; }
+
+  .reveal-result { animation: reveal-in 0.8s 0.5s both; }
+  @keyframes reveal-in {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal-shake, .reveal-shake-hard, .reveal-pulse { animation: none; }
+  }
+}
