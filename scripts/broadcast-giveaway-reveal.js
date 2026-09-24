@@ -9,6 +9,7 @@
  * Usage:
  *   node scripts/broadcast-giveaway-reveal.js           # dry run, sends nothing
  *   DAISY_BROADCAST_CONFIRM=yes node scripts/broadcast-giveaway-reveal.js --send
+ *   add --team-only to text just the team's phones (a test)
  */
 
 var path = require("path");
@@ -28,6 +29,10 @@ var PrismaClient = require("@prisma/client").PrismaClient;
 
 var SITE = "https://www.daisyweekly.com";
 var MATCHED_DAYS = 14;
+/** The team's own phones, so we see the text land. Omar is a test account and
+ *  Malik has no recent match, so the filter above would skip them both. */
+var TEAM_IDS = ["cmu10dhgy0000l304e5g27xhe", "cmoq0z7ei0000ju04p0x2rfdg"];
+var TEAM_ONLY = process.argv.indexOf("--team-only") !== -1;
 var DELAY_MS = 300;
 
 function body(user) {
@@ -56,13 +61,20 @@ function sleep(ms) {
   var since = { createdAt: { gte: new Date(Date.now() - MATCHED_DAYS * 864e5) } };
   var prisma = new PrismaClient();
   var users = await prisma.user.findMany({
-    where: {
-      phoneVerified: true,
-      phoneNumber: { not: null },
-      smsConsent: true,
-      isTestAccount: false,
-      OR: [{ matchesAsA: { some: since } }, { matchesAsB: { some: since } }],
-    },
+    where: TEAM_ONLY
+      ? { id: { in: TEAM_IDS } }
+      : {
+          OR: [
+            { id: { in: TEAM_IDS } },
+            {
+              phoneVerified: true,
+              phoneNumber: { not: null },
+              smsConsent: true,
+              isTestAccount: false,
+              OR: [{ matchesAsA: { some: since } }, { matchesAsB: { some: since } }],
+            },
+          ],
+        },
     select: { id: true, firstName: true, phoneNumber: true },
     orderBy: { createdAt: "asc" },
   });
