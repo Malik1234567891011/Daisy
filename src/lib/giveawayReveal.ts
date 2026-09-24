@@ -1,8 +1,8 @@
 /**
  * The live reveal of the $200 date winners, shown over the dashboard.
  *
- * Everyone gets an SMS pointing at /dashboard. Anyone there before 11:58
- * watches the real countdown; anyone who opens it after 11:58 gets a short
+ * Everyone gets an SMS at 11:58 pointing at /dashboard. Anyone there before
+ * noon watches the real countdown; anyone who opens it after noon gets a short
  * five-second one so the reveal still lands. After `hideAfter` the overlay is
  * gone for good — delete this file and <GiveawayReveal /> once it has passed.
  *
@@ -11,8 +11,8 @@
  */
 
 export const REVEAL = {
-  /** 11:58am, Thursday Sept 24 2026, Montreal (EDT). */
-  revealAt: "2026-09-24T15:58:00.000Z",
+  /** Noon, Thursday Sept 24 2026, Montreal (EDT). */
+  revealAt: "2026-09-24T16:00:00.000Z",
   /** End of Friday Sept 25 2026, Montreal (EDT). */
   hideAfter: "2026-09-26T04:00:00.000Z",
   /** How long before revealAt the overlay starts showing the countdown. */

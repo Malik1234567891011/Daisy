@@ -9,7 +9,7 @@ import { REVEAL, type RevealPhase } from "@/lib/giveawayReveal";
 /**
  * Full-screen reveal of the $200 date winners, over the dashboard.
  *
- * Before 11:58: the real countdown and a shaking heart. After: a short
+ * Before noon: the real countdown and a shaking heart. After noon: a short
  * countdown for latecomers, then the heart splits open on "you won" or
  * "not this time". Seen once per browser, then it stays out of the way.
  *
